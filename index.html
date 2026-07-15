@@ -566,6 +566,7 @@
       <div class="controles-jogo">
         <button id="btn-tocar-trecho" class="btn">▶ Tocar trecho</button>
         <button id="btn-loop-trecho" class="btn secundario">🔁 Loop</button>
+        <button id="btn-loop-anterior" class="btn secundario" disabled>🔁➕ Loop com anterior</button>
         <button id="btn-ouvir-jogados" class="btn secundario" disabled>🎧 Ouvir já jogados</button>
         <button id="btn-mudo" class="btn secundario">🔊 Acordes</button>
         <label class="volume-controle">🔊
@@ -1606,8 +1607,10 @@ const Jogo = (() => {
 
   let jogo = null, musica = null, ws = null, regioes = null, listaRegioes = [];
   let indice = 0, pontos = 0, selecionado = null, respondido = false;
-  let loop = false;
-  // O que está tocando: {tipo:"trecho"} (atual) | {tipo:"antigo",i} | {tipo:"seq",i} | null
+  // Loop: "off" | "atual" (só o trecho da vez) | "anterior" (trecho anterior + atual,
+  // para dar contexto ao ouvido quando o trecho é curto demais)
+  let modoLoop = "off";
+  // O que está tocando: {tipo:"trecho",i} (atual/par) | {tipo:"antigo",i} | {tipo:"seq",i} | null
   let reproducao = null;
 
   const ativo = () => !!jogo;
@@ -1635,6 +1638,12 @@ const Jogo = (() => {
     const bSeq = el("btn-ouvir-jogados");
     bSeq.disabled = !jogo || ultimoRespondido() < 0;
     bSeq.classList.toggle("ativo", reproducao?.tipo === "seq");
+    const bLoop = el("btn-loop-trecho");
+    bLoop.textContent = modoLoop === "atual" ? "🔁 Loop LIGADO" : "🔁 Loop";
+    bLoop.classList.toggle("ativo", modoLoop === "atual");
+    const bLoopAnt = el("btn-loop-anterior");
+    bLoopAnt.disabled = !jogo || indice === 0; // 1º trecho não tem anterior
+    bLoopAnt.classList.toggle("ativo", modoLoop === "anterior");
   }
   // Trecho atual em destaque; já jogados visíveis; futuros quase apagados (bloqueados)
   function atualizarCoresRegioes() {
@@ -1690,9 +1699,21 @@ const Jogo = (() => {
       // quando a reprodução chegou de fato ao fim da região
       if (ws.getCurrentTime() < r.end - 0.15) return;
       const i = listaRegioes.indexOf(r);
-      if (reproducao.tipo === "trecho" && i === indice) {
-        if (loop) r.play();
-        else pararReproducao();
+      if (reproducao.tipo === "trecho" && i === reproducao.i) {
+        const comAnterior = modoLoop === "anterior" && indice > 0;
+        if (i === indice - 1) {
+          // Terminou o trecho anterior → emenda no atual (mesmo que o loop
+          // tenha sido desligado no meio: termina a passada e para lá)
+          reproducao.i = indice;
+          listaRegioes[indice].play();
+        } else if (i === indice) {
+          if (modoLoop === "atual") r.play();
+          else if (comAnterior) {
+            // fim do atual → volta ao início do trecho anterior
+            reproducao.i = indice - 1;
+            listaRegioes[indice - 1].play();
+          } else pararReproducao();
+        }
       } else if (reproducao.tipo === "seq" && i === reproducao.i) {
         if (i < ultimoRespondido()) {
           reproducao.i = i + 1;
@@ -1707,7 +1728,7 @@ const Jogo = (() => {
       e?.stopPropagation?.();
       const i = listaRegioes.indexOf(r);
       if (i > ultimoRespondido() && i !== indice) return; // ainda bloqueado
-      reproducao = i === indice ? { tipo: "trecho" } : { tipo: "antigo", i };
+      reproducao = i === indice ? { tipo: "trecho", i: indice } : { tipo: "antigo", i };
       r.play();
       atualizarBotoes();
     });
@@ -1719,6 +1740,7 @@ const Jogo = (() => {
     respondido = false;
     selecionado = null;
     reproducao = null;
+    if (indice === 0 && modoLoop === "anterior") modoLoop = "off"; // 1º trecho não tem anterior
     atualizarPlacar();
     atualizarBotoes();
     atualizarCoresRegioes();
@@ -1889,8 +1911,10 @@ const Jogo = (() => {
     if (reproducao?.tipo === "trecho") {
       pararReproducao();
     } else {
-      reproducao = { tipo: "trecho" };
-      listaRegioes[indice].play();
+      // Com "loop com anterior" ligado, o play já começa no trecho anterior
+      const inicio = (modoLoop === "anterior" && indice > 0) ? indice - 1 : indice;
+      reproducao = { tipo: "trecho", i: inicio };
+      listaRegioes[inicio].play();
       atualizarBotoes();
     }
   });
@@ -1904,10 +1928,13 @@ const Jogo = (() => {
       atualizarBotoes();
     }
   });
-  el("btn-loop-trecho").addEventListener("click", (e) => {
-    loop = !loop;
-    e.currentTarget.classList.toggle("ativo", loop);
-    e.currentTarget.textContent = loop ? "🔁 Loop LIGADO" : "🔁 Loop";
+  el("btn-loop-trecho").addEventListener("click", () => {
+    modoLoop = modoLoop === "atual" ? "off" : "atual";
+    atualizarBotoes();
+  });
+  el("btn-loop-anterior").addEventListener("click", () => {
+    modoLoop = modoLoop === "anterior" ? "off" : "anterior";
+    atualizarBotoes();
   });
   el("btn-responder").addEventListener("click", responder);
   el("btn-proximo").addEventListener("click", proximo);
