@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#2e86c1"/>
+  <!-- octógono central (identidade do campo harmônico) -->
+  <polygon points="256,96 356,138 398,238 356,338 256,380 156,338 114,238 156,138"
+           fill="#f4f1ea" stroke="#1b5e8a" stroke-width="12"/>
+  <!-- nota musical -->
+  <ellipse cx="222" cy="300" rx="38" ry="28" fill="#2d7a1f" transform="rotate(-18 222 300)"/>
+  <rect x="252" y="160" width="14" height="142" rx="7" fill="#2d7a1f"/>
+  <path d="M266 160 q54 14 54 62 q-10 -30 -54 -34 z" fill="#2d7a1f"/>
+</svg>

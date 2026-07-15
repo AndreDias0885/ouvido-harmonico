@@ -1,0 +1,65 @@
+LISTA DOS 48 ACORDES — Ouvido Harmônico
+Nomeie os arquivos EXATAMENTE assim (sustenido/bemol = "s" no nome do arquivo).
+Na interface do app: Cs aparece como C#, Fs como F#, e Ds/Gs/As como Eb/Ab/Bb.
+
+MAIORES (12):
+C.mp3
+Cs.mp3   (= C#)
+D.mp3
+Ds.mp3   (= Eb)
+E.mp3
+F.mp3
+Fs.mp3   (= F#)
+G.mp3
+Gs.mp3   (= Ab)
+A.mp3
+As.mp3   (= Bb)
+B.mp3
+
+MENORES (12):
+Cm.mp3
+Csm.mp3  (= C#m)
+Dm.mp3
+Dsm.mp3  (= Ebm)
+Em.mp3
+Fm.mp3
+Fsm.mp3  (= F#m)
+Gm.mp3
+Gsm.mp3  (= Abm)
+Am.mp3
+Asm.mp3  (= Bbm)
+Bm.mp3
+
+MAIORES COM TERÇA NO BAIXO (12):
+C_3.mp3   (= C/E)
+Cs_3.mp3  (= C#/F)   [C#/E#]
+D_3.mp3   (= D/F#)
+Ds_3.mp3  (= Eb/G)
+E_3.mp3   (= E/G#)
+F_3.mp3   (= F/A)
+Fs_3.mp3  (= F#/A#)
+G_3.mp3   (= G/B)
+Gs_3.mp3  (= Ab/C)
+A_3.mp3   (= A/C#)
+As_3.mp3  (= Bb/D)
+B_3.mp3   (= B/D#)
+
+MAIORES COM QUINTA NO BAIXO (12):
+C_5.mp3   (= C/G)
+Cs_5.mp3  (= C#/G#)
+D_5.mp3   (= D/A)
+Ds_5.mp3  (= Eb/Bb)
+E_5.mp3   (= E/B)
+F_5.mp3   (= F/C)
+Fs_5.mp3  (= F#/C#)
+G_5.mp3   (= G/D)
+Gs_5.mp3  (= Ab/Eb)
+A_5.mp3   (= A/E)
+As_5.mp3  (= Bb/F)
+B_5.mp3   (= B/F#)
+
+CONFIGURAÇÃO DE EXPORTAÇÃO NO REAPER:
+- Formato: MP3, 192 kbps (também aceita WAV, OGG, M4A/AAC)
+- Duração sugerida: 2 a 4 segundos por acorde
+- Deixar o acorde soar e decair naturalmente
+- Sem silêncio longo no início (o toque no octógono deve responder na hora)

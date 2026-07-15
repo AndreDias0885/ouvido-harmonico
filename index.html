@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2e86c1">
+<title>Ouvido Harmônico</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon192.png">
+<style>
+  /* ============ Fontes (offline, dentro do app) ============ */
+  @font-face {
+    font-family: "Fredoka";
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url(libs/fonts/fredoka.woff2) format("woff2");
+  }
+  @font-face {
+    font-family: "Nunito";
+    font-style: normal;
+    font-weight: 200 1000;
+    font-display: swap;
+    src: url(libs/fonts/nunito.woff2) format("woff2");
+  }
+
+  /* ============ Base ============ */
+  :root {
+    /* Cores dos graus (imagem de referência do André) — usadas nas próximas etapas */
+    --cor-i: #2d7a1f;
+    --cor-iim: #5bb8f0;
+    --cor-iiim: #6fd45a;
+    --cor-iv: #2e86c1;
+    --cor-v: #c77ce8;
+    --cor-vim: #6fd45a;
+    --cor-viio: #cccccc;
+
+    --fundo: #f4f1ea;
+    --cartao: #ffffff;
+    --tinta: #2c3345;
+    --tinta-suave: #6b7280;
+    --destaque: #2e86c1;
+    --raio: 18px;
+    --sombra: 0 4px 14px rgba(44, 51, 69, .12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Nunito", "Segoe UI", system-ui, sans-serif;
+    background: var(--fundo);
+    color: var(--tinta);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  /* Fredoka nos elementos de destaque (identidade dos apps do André) */
+  h1, h2, .btn, .grau, .slot, .seta-tom, .cartao-jogo .nome,
+  .pin-teclado button, .resultado-estrelas, .status-acordes,
+  #jogo-placar, .jogo-prof .titulo {
+    font-family: "Fredoka", "Nunito", sans-serif;
+  }
+
+  /* ============ Telas (navegação) ============ */
+  .tela { display: none; min-height: 100dvh; flex-direction: column; }
+  .tela.ativa { display: flex; animation: aparecer .22s ease; }
+  @keyframes aparecer {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  header.topo {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px;
+    background: var(--cartao);
+    box-shadow: var(--sombra);
+  }
+  header.topo h1 { font-size: 1.35rem; font-weight: 600; flex: 1; }
+  .conteudo { flex: 1; padding: 20px; overflow-y: auto; }
+
+  /* ============ Botões ============ */
+  button {
+    font: inherit; color: inherit; border: none; cursor: pointer;
+    background: none; touch-action: manipulation;
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 52px; padding: 12px 22px;
+    border-radius: var(--raio);
+    background: var(--destaque); color: #fff;
+    font-size: 1.05rem; font-weight: 600;
+    box-shadow: var(--sombra);
+    transition: transform .08s ease;
+  }
+  .btn:active { transform: scale(.96); }
+  .btn.secundario { background: var(--cartao); color: var(--tinta); }
+  .btn.discreto {
+    min-height: 44px; padding: 8px 14px; box-shadow: none;
+    background: none; color: var(--tinta-suave); font-weight: 500;
+  }
+  .btn-voltar { font-size: 1.5rem; line-height: 1; padding: 6px 10px; border-radius: 12px; }
+  .btn-voltar:active { background: rgba(0,0,0,.06); }
+
+  /* ============ Biblioteca ============ */
+  .status-acordes {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--cartao); box-shadow: var(--sombra);
+    font-size: .95rem; color: var(--tinta-suave);
+  }
+  .status-acordes .bolinha { width: 12px; height: 12px; border-radius: 50%; background: #e74c3c; }
+  .status-acordes.completo .bolinha { background: var(--cor-i); }
+
+  .grade-jogos {
+    display: grid; gap: 16px; margin-top: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+  .cartao-jogo {
+    background: var(--cartao); border-radius: var(--raio);
+    box-shadow: var(--sombra); padding: 18px; text-align: left;
+    display: flex; flex-direction: column; gap: 6px;
+    transition: transform .08s ease;
+  }
+  .cartao-jogo:active { transform: scale(.97); }
+  .cartao-jogo .nome { font-size: 1.1rem; font-weight: 600; }
+  .cartao-jogo .info { font-size: .9rem; color: var(--tinta-suave); }
+
+  .vazio {
+    margin-top: 40px; text-align: center; color: var(--tinta-suave);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .vazio .emoji { font-size: 3rem; }
+
+  /* ============ Biblioteca de Acordes (checklist 48 slots) ============ */
+  .dica {
+    color: var(--tinta-suave); font-size: .95rem;
+    line-height: 1.5; margin-bottom: 16px; max-width: 90ch;
+  }
+  .acordes-grade {
+    display: grid;
+    grid-template-columns: auto repeat(12, minmax(52px, 1fr));
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+  .rotulo-linha {
+    display: flex; align-items: center;
+    font-weight: 600; font-size: .85rem; color: var(--tinta-suave);
+    padding-right: 8px; white-space: nowrap;
+  }
+  .slot {
+    min-height: 50px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: .95rem;
+    border: 2px dashed #c8c2b4; color: #b0aa9c;
+    transition: transform .08s ease;
+  }
+  .slot.cheio {
+    border: none; background: var(--cor-i); color: #fff;
+    box-shadow: var(--sombra), inset 0 -3px 0 rgba(0, 0, 0, .18);
+    cursor: pointer;
+  }
+  .slot.cheio:active { transform: scale(.92); }
+  .slot.tocando { outline: 3px solid var(--cor-v); }
+  .acordes-resultado {
+    margin-top: 16px; padding: 14px 18px;
+    background: var(--cartao); border-radius: var(--raio);
+    box-shadow: var(--sombra); font-size: .95rem; line-height: 1.6;
+  }
+  .acordes-resultado .erro { color: #e74c3c; }
+
+  /* ============ Campo Harmônico (gráfico dos graus) ============ */
+  .campo-harmonico {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(72px, 1fr));
+    gap: 12px 14px;
+    align-items: start;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .seta-tom {
+    grid-row: 1; grid-column: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+  }
+  .seta-tom .tom-rotulo {
+    background: #ff4fb8; color: #fff;
+    font-weight: 600; font-size: .95rem; letter-spacing: .08em;
+    padding: 4px 14px; border-radius: 999px;
+    box-shadow: var(--sombra);
+  }
+  .seta-tom .tom-seta {
+    width: 0; height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-top: 11px solid #ff4fb8;
+  }
+  .grau {
+    position: relative;
+    min-height: 68px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 600; font-size: 1.5rem;
+    box-shadow: var(--sombra), inset 0 -4px 0 rgba(0, 0, 0, .18);
+    transition: transform .08s ease;
+  }
+  /* leve inclinação alternada, como no desenho à mão */
+  .grau:nth-child(even) { transform: rotate(-1.2deg); }
+  .grau:nth-child(odd)  { transform: rotate(1deg); }
+  .grau:active:not(:disabled) { transform: scale(.9); }
+  .grau.tocando { outline: 4px solid #ffd94f; }
+  .grau:disabled { cursor: default; box-shadow: none; }
+  .grau.inversao {
+    grid-row: 3;
+    min-height: 50px; font-size: 1.05rem; border-radius: 8px;
+  }
+  .grau.sem-audio { animation: tremer .3s ease; }
+  @keyframes tremer {
+    0%, 100% { translate: 0; }
+    25% { translate: -5px 0; }
+    75% { translate: 5px 0; }
+  }
+
+  .painel {
+    background: var(--cartao); border-radius: var(--raio);
+    box-shadow: var(--sombra); padding: 20px; margin-bottom: 20px;
+  }
+  .painel h2 { font-size: 1.15rem; margin-bottom: 14px; }
+  .seletor-tom {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .seletor-tom select {
+    font: inherit; font-weight: 600;
+    padding: 10px 16px; border-radius: 12px;
+    border: 2px solid var(--destaque); background: var(--fundo);
+    color: var(--tinta); min-height: 48px;
+  }
+  .nota-rodape { margin-top: 14px; font-size: .88rem; color: var(--tinta-suave); }
+
+  /* ============ Editor de jogos (Modo Professor) ============ */
+  .lista-jogos-prof { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .jogo-prof {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 12px 14px; border-radius: 12px; background: var(--fundo);
+  }
+  .jogo-prof .titulo { font-weight: 600; }
+  .jogo-prof .detalhes { color: var(--tinta-suave); font-size: .9rem; flex: 1; }
+  .jogo-prof button { min-height: 44px; padding: 6px 12px; border-radius: 10px; background: var(--cartao); box-shadow: var(--sombra); }
+
+  .editor-form {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    align-items: start;
+  }
+  .campo { display: flex; flex-direction: column; gap: 6px; }
+  .campo > span { font-weight: 600; font-size: .9rem; }
+  .campo input[type="text"], .campo select {
+    font: inherit; padding: 10px 12px; min-height: 48px;
+    border: 2px solid #d8d2c4; border-radius: 12px;
+    background: var(--fundo); color: var(--tinta);
+  }
+  .campo input[type="text"]:focus, .campo select:focus { outline: none; border-color: var(--destaque); }
+
+  .editor-controles {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .zoom-controle { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--tinta-suave); }
+  #waveform {
+    background: var(--fundo); border-radius: 12px;
+    min-height: 100px; overflow: hidden;
+  }
+
+  /* Editor: altura travada para a rolagem acontecer só no conteúdo */
+  #tela-editor { height: 100dvh; }
+
+  /* Forma de onda e controles ficam grudados no topo enquanto os trechos rolam */
+  .painel-onda {
+    position: sticky; top: -12px; z-index: 10;
+    box-shadow: 0 6px 18px rgba(44, 51, 69, .18);
+  }
+
+  .trecho { margin-bottom: 14px; }
+  .trecho-cab { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .cor-chip { width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0; }
+  .trecho-cab .faixa { color: var(--tinta-suave); font-size: .95rem; min-width: 110px; }
+  .trecho-cab button { min-height: 44px; padding: 6px 14px; border-radius: 10px; background: var(--fundo); font-weight: 600; }
+  .trecho-cab button.ativo { background: var(--destaque); color: #fff; }
+  .trecho-resp {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    align-items: end;
+  }
+  .trecho-resp label { display: flex; flex-direction: column; gap: 5px; font-size: .88rem; font-weight: 600; }
+  .trecho-resp select {
+    font: inherit; padding: 9px 10px; min-height: 46px;
+    border: 2px solid #d8d2c4; border-radius: 10px; background: var(--fundo);
+  }
+  .trecho-resp .btn { min-height: 46px; }
+
+  /* ============ Modo Aluno (jogo) ============ */
+  #waveform-jogo { background: var(--fundo); border-radius: 12px; min-height: 90px; overflow: hidden; }
+  .controles-jogo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+  .controles-jogo .btn.ativo { background: var(--destaque); color: #fff; }
+  .volume-controle {
+    display: flex; align-items: center; gap: 8px;
+    font-size: .9rem; color: var(--tinta-suave); font-weight: 600;
+  }
+  .volume-controle input[type="range"] { width: 120px; accent-color: var(--destaque); }
+
+  /* Backup */
+  .backup-linha { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .backup-check {
+    display: flex; align-items: center; gap: 8px;
+    font-size: .95rem; font-weight: 600;
+  }
+  .backup-check input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--destaque); }
+  #campo-jogo { margin: 20px auto; }
+  .acoes-jogo { display: flex; justify-content: center; gap: 14px; margin-top: 10px; }
+  .feedback-jogo {
+    text-align: center; font-size: 1.15rem; font-weight: 700;
+    padding: 12px 18px; border-radius: 12px;
+    margin: 12px auto 0; max-width: 620px;
+  }
+  .feedback-jogo.acerto { background: #e3f7dd; color: #287F0C; }
+  .feedback-jogo.erro { background: #fdecec; color: #c0392b; }
+
+  /* Estados dos retângulos durante o jogo */
+  .grau.esmaecido { opacity: .25; }
+  .grau.alternativa { animation: pulsar 1.1s ease-in-out infinite; }
+  @keyframes pulsar {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 217, 79, .95); }
+    50% { box-shadow: 0 0 0 9px rgba(255, 217, 79, 0); }
+  }
+  .grau.selecionada { outline: 4px solid var(--tinta); outline-offset: 2px; }
+  .grau.brilha { animation: brilhar 1s ease-in-out infinite; }
+  @keyframes brilhar {
+    0%, 100% { box-shadow: 0 0 8px 2px #ffd94f; }
+    50% { box-shadow: 0 0 24px 12px #ffd94f; }
+  }
+  .grau.errada::after {
+    content: "✖"; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; color: #fff;
+    background: rgba(192, 57, 43, .55); border-radius: inherit;
+  }
+
+  /* Confete do acerto */
+  .confete-area { position: fixed; inset: 0; pointer-events: none; z-index: 300; overflow: hidden; }
+  .confete { position: absolute; top: -16px; width: 12px; height: 12px; border-radius: 3px; animation: cair linear forwards; }
+  @keyframes cair { to { transform: translateY(105vh) rotate(720deg); } }
+
+  .resultado-estrelas { font-size: 2.6rem; letter-spacing: .1em; }
+
+  /* ============ Placeholder de etapas futuras ============ */
+  .em-breve {
+    margin: auto; text-align: center; color: var(--tinta-suave);
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    padding: 30px;
+  }
+  .em-breve .emoji { font-size: 3.2rem; }
+  .em-breve p { max-width: 46ch; line-height: 1.5; }
+
+  /* ============ Modal do PIN ============ */
+  .modal-fundo {
+    position: fixed; inset: 0; z-index: 50;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(44, 51, 69, .45);
+  }
+  .modal-fundo.aberto { display: flex; }
+  .modal {
+    background: var(--cartao); border-radius: var(--raio);
+    box-shadow: var(--sombra); padding: 28px; width: min(90vw, 380px);
+    display: flex; flex-direction: column; gap: 16px; text-align: center;
+  }
+  .modal h2 { font-size: 1.25rem; }
+  .pin-visor { display: flex; justify-content: center; gap: 12px; }
+  .pin-visor span {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--tinta-suave);
+  }
+  .pin-visor span.cheio { background: var(--destaque); border-color: var(--destaque); }
+  .pin-teclado {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  .pin-teclado button {
+    min-height: 56px; font-size: 1.3rem; font-weight: 600;
+    background: var(--fundo); border-radius: 14px;
+  }
+  .pin-teclado button:active { background: #e3ded2; }
+  .pin-erro { color: #e74c3c; font-size: .9rem; min-height: 1.2em; }
+
+  /* ============ Aviso de orientação retrato ============ */
+  #aviso-retrato {
+    position: fixed; inset: 0; z-index: 100;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; text-align: center; padding: 30px;
+    background: var(--fundo);
+  }
+  #aviso-retrato .emoji { font-size: 4rem; animation: girar 2s ease-in-out infinite; }
+  @keyframes girar {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(90deg); }
+  }
+  @media (orientation: portrait) {
+    #aviso-retrato { display: flex; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Aviso: gire o tablet ===== -->
+<div id="aviso-retrato">
+  <div class="emoji">📱</div>
+  <h2>Gire o aparelho</h2>
+  <p>O Ouvido Harmônico funciona na horizontal (paisagem). 🎵</p>
+</div>
+
+<!-- ===== Tela: Biblioteca (inicial) ===== -->
+<section id="tela-biblioteca" class="tela">
+  <header class="topo">
+    <h1>🎵 Ouvido Harmônico</h1>
+    <div id="status-acordes" class="status-acordes">
+      <span class="bolinha"></span>
+      <span id="status-acordes-texto">Acordes: 0/48</span>
+    </div>
+    <button class="btn discreto" data-nav="professor">🔒 Professor</button>
+  </header>
+  <div class="conteudo">
+    <div id="grade-jogos" class="grade-jogos"></div>
+    <div id="biblioteca-vazia" class="vazio" hidden>
+      <div class="emoji">🎼</div>
+      <p>Nenhum jogo por aqui ainda.<br>Peça ao professor para criar o primeiro!</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Tela: Modo Professor (Etapa 4 trará o editor) ===== -->
+<section id="tela-professor" class="tela">
+  <header class="topo">
+    <button class="btn-voltar" data-nav="biblioteca" aria-label="Voltar">←</button>
+    <h1>👨‍🏫 Modo Professor</h1>
+    <button id="btn-acordes" class="btn discreto" data-nav="acordes">🎹 Biblioteca de acordes</button>
+  </header>
+  <div class="conteudo">
+    <div class="painel">
+      <h2>🎼 Campo Harmônico — teste por tom</h2>
+      <div class="seletor-tom">
+        <label for="tom-teste"><b>Tom:</b></label>
+        <select id="tom-teste"></select>
+        <label class="volume-controle">🔊 Volume dos acordes
+          <input id="volume-acordes-teste" type="range" min="0" max="100" step="5">
+        </label>
+        <span class="nota-rodape">Toque nos retângulos para ouvir cada grau no tom escolhido.</span>
+      </div>
+      <div id="campo-teste" class="campo-harmonico"></div>
+      <p class="nota-rodape">O VII° fica cinza e mudo (sem áudio gravado). Se um acorde tremer ao toque, o arquivo dele ainda não foi importado na Biblioteca de Acordes.</p>
+    </div>
+    <div class="painel">
+      <h2>🛠️ Editor de jogos</h2>
+      <button id="btn-novo-jogo" class="btn">➕ Novo jogo</button>
+      <div id="lista-jogos-prof" class="lista-jogos-prof"></div>
+    </div>
+
+    <div class="painel">
+      <h2>💾 Backup — transferir entre aparelhos</h2>
+      <div class="backup-linha">
+        <label class="backup-check">
+          <input type="checkbox" id="backup-incluir-audios" checked>
+          Incluir áudios (músicas e acordes)
+        </label>
+        <button id="btn-exportar" class="btn">📤 Exportar backup</button>
+        <button id="btn-importar-backup" class="btn secundario">📥 Importar backup</button>
+        <input id="input-backup" type="file" accept=".json,application/json" hidden>
+      </div>
+      <p id="backup-status" class="nota-rodape">Exporta um arquivo .json com jogos, músicas e acordes. No outro aparelho (ou após limpar o navegador), basta importar.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Tela: Importação de acordes (checklist dos 48 slots) ===== -->
+<section id="tela-acordes" class="tela">
+  <header class="topo">
+    <button class="btn-voltar" data-nav="professor" aria-label="Voltar">←</button>
+    <h1>🎹 Biblioteca de Acordes</h1>
+    <div id="acordes-contador" class="status-acordes">
+      <span class="bolinha"></span>
+      <span id="acordes-contador-texto">0/48</span>
+    </div>
+    <button id="btn-importar" class="btn">📥 Importar arquivos</button>
+    <input id="input-acordes" type="file" multiple hidden
+           accept=".mp3,.wav,.ogg,.m4a,.aac,audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/aac">
+  </header>
+  <div class="conteudo">
+    <p class="dica">
+      Selecione os arquivos de uma vez só (pode repetir a importação para completar).
+      Nomes esperados: <b>C.mp3</b> (maior), <b>Am.mp3</b> (menor), <b>G_3.mp3</b> (terça no baixo),
+      <b>C_5.mp3</b> (quinta no baixo) — sustenido escrito com "s" (<b>Cs</b> = C#).
+      Toque num acorde importado para ouvi-lo. ✅
+    </p>
+    <div id="acordes-grade" class="acordes-grade"></div>
+    <div id="acordes-resultado" class="acordes-resultado" hidden></div>
+  </div>
+</section>
+
+<!-- ===== Tela: Editor de jogo (Modo Professor) ===== -->
+<section id="tela-editor" class="tela">
+  <header class="topo">
+    <button class="btn-voltar" data-nav="professor" aria-label="Voltar">←</button>
+    <h1 id="editor-titulo">🎼 Novo jogo</h1>
+    <button id="btn-salvar-jogo" class="btn">💾 Salvar jogo</button>
+  </header>
+  <div class="conteudo">
+    <div class="painel">
+      <div class="editor-form">
+        <div class="campo">
+          <span>Arquivo da música</span>
+          <button id="btn-musica" class="btn secundario">🎵 Escolher arquivo…</button>
+          <input id="input-musica" type="file" hidden
+                 accept=".mp3,.wav,.ogg,.m4a,.aac,audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/aac">
+          <span id="musica-nome-arquivo" class="nota-rodape"></span>
+        </div>
+        <label class="campo"><span>Nome da música</span>
+          <input id="jogo-nome" type="text" placeholder="Ex.: Ao Único">
+        </label>
+        <label class="campo"><span>Artista (opcional)</span>
+          <input id="jogo-artista" type="text" placeholder="Ex.: Vineyard">
+        </label>
+        <label class="campo"><span>Tom da música</span>
+          <select id="jogo-tom"></select>
+        </label>
+        <label class="campo"><span>Nível do jogo</span>
+          <select id="jogo-nivel">
+            <option value="1">Nível 1 — Graus</option>
+            <option value="2">Nível 2 — Inversões</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="painel painel-onda">
+      <div class="editor-controles">
+        <button id="btn-play-editor" class="btn secundario">▶ Tocar / Pausar</button>
+        <button id="btn-novo-trecho" class="btn">➕ Novo trecho</button>
+        <label class="zoom-controle">🔍 Zoom
+          <input id="zoom-editor" type="range" min="1" max="300" value="1">
+        </label>
+        <span id="tempo-editor" class="nota-rodape">0:00 / 0:00</span>
+      </div>
+      <div id="waveform"></div>
+      <p class="nota-rodape">Crie um trecho e arraste as bordas da região colorida para ajustar início e fim. O "Novo trecho" nasce na posição atual do cursor.</p>
+    </div>
+
+    <div id="lista-trechos"></div>
+  </div>
+</section>
+
+<!-- ===== Tela: Modo Aluno / Jogo ===== -->
+<section id="tela-jogo" class="tela">
+  <header class="topo">
+    <button class="btn-voltar" data-nav="biblioteca" aria-label="Voltar">←</button>
+    <h1 id="jogo-titulo">🎮</h1>
+    <div id="jogo-placar" class="status-acordes"></div>
+  </header>
+  <div class="conteudo">
+    <div class="painel">
+      <div id="waveform-jogo"></div>
+      <div class="controles-jogo">
+        <button id="btn-tocar-trecho" class="btn">▶ Tocar trecho</button>
+        <button id="btn-loop-trecho" class="btn secundario">🔁 Loop</button>
+        <button id="btn-ouvir-jogados" class="btn secundario" disabled>🎧 Ouvir já jogados</button>
+        <button id="btn-mudo" class="btn secundario">🔊 Acordes</button>
+        <label class="volume-controle">🔊
+          <input id="volume-acordes-jogo" type="range" min="0" max="100" step="5">
+        </label>
+        <span class="nota-rodape">Ouça o trecho, compare tocando nos acordes e escolha uma opção que pulsa. Trechos já jogados podem ser reouvidos tocando neles na onda. 👂</span>
+      </div>
+    </div>
+    <div id="campo-jogo" class="campo-harmonico"></div>
+    <div id="feedback-jogo" class="feedback-jogo" hidden></div>
+    <div class="acoes-jogo">
+      <button id="btn-responder" class="btn" disabled>✅ Responder</button>
+      <button id="btn-proximo" class="btn" hidden>Próximo trecho ➡</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Modal: resultado do jogo ===== -->
+<div id="modal-resultado" class="modal-fundo">
+  <div class="modal">
+    <h2>🏁 Fim de jogo!</h2>
+    <div id="resultado-estrelas" class="resultado-estrelas"></div>
+    <p id="resultado-placar"></p>
+    <p id="resultado-recorde" class="nota-rodape"></p>
+    <button id="btn-jogar-denovo" class="btn">🔄 Jogar de novo</button>
+    <button id="btn-voltar-biblioteca" class="btn secundario">🏠 Voltar à biblioteca</button>
+  </div>
+</div>
+
+<!-- ===== Modal: PIN do professor ===== -->
+<div id="modal-pin" class="modal-fundo">
+  <div class="modal">
+    <h2>🔒 PIN do Professor</h2>
+    <div class="pin-visor">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div id="pin-erro" class="pin-erro"></div>
+    <div class="pin-teclado">
+      <button data-digito="1">1</button><button data-digito="2">2</button><button data-digito="3">3</button>
+      <button data-digito="4">4</button><button data-digito="5">5</button><button data-digito="6">6</button>
+      <button data-digito="7">7</button><button data-digito="8">8</button><button data-digito="9">9</button>
+      <button id="pin-cancelar">✖</button><button data-digito="0">0</button><button id="pin-apagar">⌫</button>
+    </div>
+  </div>
+</div>
+
+<script src="libs/wavesurfer.min.js"></script>
+<script src="libs/regions.min.js"></script>
+<script>
+"use strict";
+
+/* ==================================================================
+   Banco de dados (IndexedDB) — stores: acordes, musicas, jogos
+   ================================================================== */
+const DB = (() => {
+  const NOME = "ouvido-harmonico";
+  const VERSAO = 1;
+  let dbPromise = null;
+
+  function abrir() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(NOME, VERSAO);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        // { id: "G_3", blob, tipo: "maior_3", nota: "G" }
+        if (!db.objectStoreNames.contains("acordes"))
+          db.createObjectStore("acordes", { keyPath: "id" });
+        // { id, nome, artista, blob, formato, duracao }
+        if (!db.objectStoreNames.contains("musicas"))
+          db.createObjectStore("musicas", { keyPath: "id" });
+        // { id, nome, musicaId, tom, nivel, criadoEm, trechos, recorde }
+        if (!db.objectStoreNames.contains("jogos"))
+          db.createObjectStore("jogos", { keyPath: "id" });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
+  }
+
+  function tx(store, modo, operacao) {
+    return abrir().then((db) => new Promise((resolve, reject) => {
+      const t = db.transaction(store, modo);
+      const req = operacao(t.objectStore(store));
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    }));
+  }
+
+  return {
+    salvar:   (store, item) => tx(store, "readwrite", (s) => s.put(item)),
+    obter:    (store, id)   => tx(store, "readonly",  (s) => s.get(id)),
+    listar:   (store)       => tx(store, "readonly",  (s) => s.getAll()),
+    contar:   (store)       => tx(store, "readonly",  (s) => s.count()),
+    excluir:  (store, id)   => tx(store, "readwrite", (s) => s.delete(id)),
+  };
+})();
+
+/* ==================================================================
+   Exibição de notas: nos arquivos o sustenido é "s" (Cs, Ds…).
+   Na interface: Cs/Fs viram C#/F#; Ds/Gs/As viram bemóis Eb/Ab/Bb.
+   ================================================================== */
+const EXIBICAO_NOTAS = { Cs: "C#", Ds: "Eb", Fs: "F#", Gs: "Ab", As: "Bb" };
+const exibirNota = (nota) => EXIBICAO_NOTAS[nota] || nota;
+
+/* ==================================================================
+   Navegação entre telas (rotas por hash — botão voltar do Android)
+   ================================================================== */
+const Rotas = (() => {
+  const TELAS = ["biblioteca", "professor", "acordes", "editor", "jogo"];
+  const PROTEGIDAS = ["professor", "acordes", "editor"]; // exigem PIN
+
+  let professorLiberado = false; // liberado até fechar/recarregar o app
+
+  function telaAtual() {
+    const nome = location.hash.replace(/^#\/?/, "");
+    return TELAS.includes(nome) ? nome : "biblioteca";
+  }
+
+  function mostrar(nome) {
+    document.querySelectorAll(".tela").forEach((t) => t.classList.remove("ativa"));
+    document.getElementById("tela-" + nome).classList.add("ativa");
+    if (nome === "biblioteca") Biblioteca.atualizar();
+    if (nome === "acordes") Acordes.atualizar();
+    if (nome === "professor") { TesteCampo.atualizar(); ProfessorJogos.atualizar(); }
+    if (nome !== "editor") Editor.pausar(); // saiu do editor → para a música
+    if (nome !== "jogo") Jogo.pausar();     // saiu do jogo → para a música
+    if (nome === "jogo" && !Jogo.ativo()) { // #/jogo direto, sem jogo escolhido
+      location.hash = "#/biblioteca";
+      return;
+    }
+  }
+
+  function aoMudarHash() {
+    const nome = telaAtual();
+    if (PROTEGIDAS.includes(nome) && !professorLiberado) {
+      Pin.pedir((ok) => {
+        if (ok) {
+          professorLiberado = true;
+          mostrar(nome);
+        } else {
+          location.hash = "#/biblioteca";
+        }
+      });
+      return;
+    }
+    mostrar(nome);
+  }
+
+  function ir(nome) {
+    if (telaAtual() === nome) aoMudarHash();
+    else location.hash = "#/" + nome;
+  }
+
+  window.addEventListener("hashchange", aoMudarHash);
+
+  return { ir, iniciar: aoMudarHash };
+})();
+
+/* ==================================================================
+   PIN do professor (4 dígitos, padrão 1234, salvo em localStorage)
+   ================================================================== */
+const Pin = (() => {
+  const CHAVE = "oh.pin";
+  const PADRAO = "8508";
+
+  const modal = document.getElementById("modal-pin");
+  const visor = modal.querySelectorAll(".pin-visor span");
+  const erro = document.getElementById("pin-erro");
+
+  let digitado = "";
+  let aoTerminar = null;
+
+  function pinSalvo() {
+    return localStorage.getItem(CHAVE) || PADRAO;
+  }
+
+  function desenhar() {
+    visor.forEach((b, i) => b.classList.toggle("cheio", i < digitado.length));
+  }
+
+  function pedir(callback) {
+    digitado = "";
+    erro.textContent = "";
+    aoTerminar = callback;
+    desenhar();
+    modal.classList.add("aberto");
+  }
+
+  function fechar(ok) {
+    modal.classList.remove("aberto");
+    if (aoTerminar) aoTerminar(ok);
+    aoTerminar = null;
+  }
+
+  modal.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (e.target === modal) { fechar(false); return; }
+    if (!btn) return;
+
+    if (btn.id === "pin-cancelar") { fechar(false); return; }
+    if (btn.id === "pin-apagar") {
+      digitado = digitado.slice(0, -1);
+      erro.textContent = "";
+      desenhar();
+      return;
+    }
+    const d = btn.dataset.digito;
+    if (d === undefined || digitado.length >= 4) return;
+
+    digitado += d;
+    desenhar();
+    if (digitado.length === 4) {
+      if (digitado === pinSalvo()) {
+        fechar(true);
+      } else {
+        erro.textContent = "PIN incorreto. Tente de novo.";
+        digitado = "";
+        setTimeout(desenhar, 350);
+      }
+    }
+  });
+
+  return { pedir };
+})();
+
+/* ==================================================================
+   Biblioteca (tela inicial): jogos salvos + status dos acordes
+   ================================================================== */
+const Biblioteca = (() => {
+  const TOTAL_ACORDES = 48;
+
+  async function atualizar() {
+    // Status da biblioteca de acordes (ex.: 48/48 importados)
+    try {
+      const n = await DB.contar("acordes");
+      document.getElementById("status-acordes-texto").textContent =
+        `Acordes: ${n}/${TOTAL_ACORDES}`;
+      document.getElementById("status-acordes")
+        .classList.toggle("completo", n >= TOTAL_ACORDES);
+    } catch (e) {
+      console.error("Erro ao contar acordes:", e);
+    }
+
+    // Grade de jogos salvos
+    try {
+      const jogos = await DB.listar("jogos");
+      const grade = document.getElementById("grade-jogos");
+      const vazia = document.getElementById("biblioteca-vazia");
+      grade.innerHTML = "";
+      vazia.hidden = jogos.length > 0;
+      for (const jogo of jogos) {
+        const btn = document.createElement("button");
+        btn.className = "cartao-jogo";
+        const recorde = jogo.recorde
+          ? `⭐ ${jogo.recorde.acertos}/${jogo.recorde.total}`
+          : "Sem recorde";
+        btn.innerHTML =
+          `<span class="nome"></span>` +
+          `<span class="info">Nível ${jogo.nivel} · ${jogo.trechos?.length ?? 0} trechos</span>` +
+          `<span class="info">${recorde}</span>`;
+        btn.querySelector(".nome").textContent = jogo.nome; // tom NÃO é exibido ao aluno
+        btn.addEventListener("click", () => Jogo.iniciar(jogo));
+        grade.appendChild(btn);
+      }
+    } catch (e) {
+      console.error("Erro ao listar jogos:", e);
+    }
+  }
+
+  return { atualizar };
+})();
+
+/* ==================================================================
+   Campo Harmônico: gráfico dos graus + transposição por tom
+   Layout do esboço do André: 8 retângulos em cima (I…VII° + I oitava)
+   e as inversões embaixo do grau cuja nota está no baixo:
+   I/3ª sob IIIm · I/5ª sob V · IV/3ª sob VIm · V/3ª sob VII°
+   ================================================================== */
+const CampoHarmonico = (() => {
+  const NOTAS = ["C", "Cs", "D", "Ds", "E", "F", "Fs", "G", "Gs", "A", "As", "B"];
+
+  // Graus do campo harmônico maior (linha de cima, colunas 1–8)
+  const GRAUS = [
+    { rotulo: "I",    semitons: 0,  sufixo: "",  cor: "#287F0C", coluna: 1 },
+    { rotulo: "IIm",  semitons: 2,  sufixo: "m", cor: "#38B6FF", coluna: 2 },
+    { rotulo: "IIIm", semitons: 4,  sufixo: "m", cor: "#6BDB54", coluna: 3 },
+    { rotulo: "IV",   semitons: 5,  sufixo: "",  cor: "#2991CD", coluna: 4 },
+    { rotulo: "V",    semitons: 7,  sufixo: "",  cor: "#CB6CE6", coluna: 5 },
+    { rotulo: "VIm",  semitons: 9,  sufixo: "m", cor: "#6BDB54", coluna: 6 },
+    { rotulo: "VII°", semitons: 11, sufixo: "",  cor: "#c4c4c4", coluna: 7, mudo: true },
+    { rotulo: "I",    semitons: 0,  sufixo: "",  cor: "#287F0C", coluna: 8, oitava: true },
+  ];
+
+  // Inversões (linha de baixo), alinhadas à coluna da nota do baixo
+  const INVERSOES = [
+    { rotulo: "I/3ª",  grauBase: "I",  variacao: "terca",  semitons: 0, sufixo: "_3", cor: "#287F0C", coluna: 3 },
+    { rotulo: "I/5ª",  grauBase: "I",  variacao: "quinta", semitons: 0, sufixo: "_5", cor: "#287F0C", coluna: 5 },
+    { rotulo: "IV/3ª", grauBase: "IV", variacao: "terca",  semitons: 5, sufixo: "_3", cor: "#2991CD", coluna: 6 },
+    { rotulo: "V/3ª",  grauBase: "V",  variacao: "terca",  semitons: 7, sufixo: "_3", cor: "#CB6CE6", coluna: 7 },
+  ];
+
+  // Transposição: tom + intervalo em semitons → nota do acorde
+  function notaDoGrau(tom, semitons) {
+    return NOTAS[(NOTAS.indexOf(tom) + semitons) % 12];
+  }
+
+  // Ex.: arquivoDoGrau("G", {semitons:7, sufixo:"_3"}) → "D_3" (V do tom de G, com 3ª no baixo)
+  function arquivoDoGrau(tom, grau) {
+    if (grau.mudo) return null;
+    return notaDoGrau(tom, grau.semitons) + grau.sufixo;
+  }
+
+  // Volume dos acordes (0 a 1), lembrado pelo app — para não soar mais alto que a música
+  let volume = Math.min(1, Math.max(0, parseFloat(localStorage.getItem("oh.volumeAcordes") ?? "0.8")));
+  function definirVolume(v) {
+    volume = Math.min(1, Math.max(0, v));
+    localStorage.setItem("oh.volumeAcordes", String(volume));
+  }
+  const obterVolume = () => volume;
+
+  let audioAtual = null;
+  async function tocar(id, botao, mudoFn) {
+    if (mudoFn?.()) {
+      // Acordes mudos (aluno com instrumento): só o feedback visual do toque
+      botao.classList.add("tocando");
+      setTimeout(() => botao.classList.remove("tocando"), 250);
+      return;
+    }
+    try {
+      const reg = await DB.obter("acordes", id);
+      if (!reg) {
+        // Arquivo ainda não importado: treme para avisar
+        botao.classList.remove("sem-audio");
+        void botao.offsetWidth; // reinicia a animação
+        botao.classList.add("sem-audio");
+        return;
+      }
+      if (audioAtual) {
+        audioAtual.pause();
+        URL.revokeObjectURL(audioAtual.src);
+        document.querySelectorAll(".grau.tocando").forEach((g) => g.classList.remove("tocando"));
+      }
+      const url = URL.createObjectURL(reg.blob);
+      const audio = new Audio(url);
+      audio.volume = volume;
+      audioAtual = audio;
+      botao.classList.add("tocando");
+      const limpar = () => {
+        botao.classList.remove("tocando");
+        URL.revokeObjectURL(url);
+      };
+      audio.onended = limpar;
+      audio.onerror = limpar;
+      audio.play().catch(limpar);
+    } catch (e) {
+      console.error("Erro ao tocar grau:", e);
+    }
+  }
+
+  // Renderiza o gráfico completo num container, para o tom dado.
+  // opcoes.inversoes = false esconde a linha de baixo (Nível 1)
+  // opcoes.mudo = função que diz se os acordes estão mutados (modo aluno)
+  function renderizar(container, tom, opcoes = {}) {
+    const mudoFn = opcoes.mudo;
+    container.innerHTML = "";
+
+    // Seta rosa "TOM" apontando para o I (identidade do material didático)
+    const seta = document.createElement("div");
+    seta.className = "seta-tom";
+    seta.innerHTML = `<span class="tom-rotulo">TOM</span><span class="tom-seta"></span>`;
+    container.appendChild(seta);
+
+    const criarBotao = (grau, ehInversao) => {
+      const btn = document.createElement("button");
+      btn.className = "grau" + (ehInversao ? " inversao" : "");
+      btn.textContent = grau.rotulo;
+      btn.style.background = grau.cor;
+      btn.style.gridColumn = grau.coluna;
+      if (!ehInversao) btn.style.gridRow = 2;
+      btn.dataset.grau = grau.grauBase || grau.rotulo;
+      btn.dataset.variacao = grau.variacao || "fund";
+      if (grau.oitava) btn.dataset.oitava = "1";
+      const id = arquivoDoGrau(tom, grau);
+      if (id) {
+        btn.dataset.acorde = id;
+        btn.addEventListener("click", () => tocar(id, btn, mudoFn));
+      } else {
+        btn.disabled = true; // VII°: visível porém inativo
+      }
+      return btn;
+    };
+
+    for (const g of GRAUS) container.appendChild(criarBotao(g, false));
+    if (opcoes.inversoes !== false) {
+      for (const inv of INVERSOES) container.appendChild(criarBotao(inv, true));
+    }
+  }
+
+  return { renderizar, arquivoDoGrau, notaDoGrau, exibirNota, definirVolume, obterVolume, NOTAS, GRAUS, INVERSOES };
+})();
+
+/* ==================================================================
+   Teste do campo harmônico no Modo Professor (seletor de tom)
+   ================================================================== */
+const TesteCampo = (() => {
+  const seletor = document.getElementById("tom-teste");
+  const container = document.getElementById("campo-teste");
+
+  for (const nota of CampoHarmonico.NOTAS) {
+    const op = document.createElement("option");
+    op.value = nota;
+    op.textContent = CampoHarmonico.exibirNota(nota) + " maior";
+    seletor.appendChild(op);
+  }
+  seletor.value = localStorage.getItem("oh.tomTeste") || "C";
+
+  function atualizar() {
+    CampoHarmonico.renderizar(container, seletor.value);
+  }
+  seletor.addEventListener("change", () => {
+    localStorage.setItem("oh.tomTeste", seletor.value);
+    atualizar();
+  });
+
+  return { atualizar };
+})();
+
+/* ==================================================================
+   Biblioteca de Acordes: importação em lote + checklist dos 48 slots
+   ================================================================== */
+const Acordes = (() => {
+  const NOTAS = ["C", "Cs", "D", "Ds", "E", "F", "Fs", "G", "Gs", "A", "As", "B"];
+  const TIPOS = [
+    { sufixo: "",   tipo: "maior",   rotulo: "Maiores" },
+    { sufixo: "m",  tipo: "menor",   rotulo: "Menores" },
+    { sufixo: "_3", tipo: "maior_3", rotulo: "3ª no baixo" },
+    { sufixo: "_5", tipo: "maior_5", rotulo: "5ª no baixo" },
+  ];
+  const EXTENSOES = ["mp3", "wav", "ogg", "m4a", "aac"];
+  const TOTAL = 48;
+
+  const grade = document.getElementById("acordes-grade");
+  const resultado = document.getElementById("acordes-resultado");
+  let audioAtual = null;
+
+  function rotuloSlot(nota, tipo) {
+    const n = exibirNota(nota);
+    if (tipo.sufixo === "m") return n + "m";
+    if (tipo.sufixo === "_3") return n + "/3ª";
+    if (tipo.sufixo === "_5") return n + "/5ª";
+    return n;
+  }
+
+  // Reconhece o acorde pelo nome do arquivo (ex.: "Fs_3.mp3" → F# com 3ª no baixo)
+  function analisarNome(nomeArquivo) {
+    const ponto = nomeArquivo.lastIndexOf(".");
+    if (ponto < 0) return { erro: "sem extensão" };
+    const ext = nomeArquivo.slice(ponto + 1).toLowerCase();
+    if (!EXTENSOES.includes(ext)) return { erro: "formato não aceito" };
+    const base = nomeArquivo.slice(0, ponto);
+    const m = /^([a-g]s?)(m|_3|_5)?$/i.exec(base);
+    if (!m) return { erro: "nome fora do padrão" };
+    const nota = m[1][0].toUpperCase() + (m[1].length > 1 ? "s" : "");
+    if (!NOTAS.includes(nota)) return { erro: "nota inexistente" };
+    const sufixo = (m[2] || "").toLowerCase();
+    const tipo = TIPOS.find((t) => t.sufixo === sufixo);
+    return { id: nota + sufixo, nota, tipo: tipo.tipo, formato: ext };
+  }
+
+  async function atualizar() {
+    let ids = new Set();
+    try {
+      const registros = await DB.listar("acordes");
+      ids = new Set(registros.map((r) => r.id));
+    } catch (e) {
+      console.error("Erro ao listar acordes:", e);
+    }
+
+    grade.innerHTML = "";
+    for (const tipo of TIPOS) {
+      const rotulo = document.createElement("div");
+      rotulo.className = "rotulo-linha";
+      rotulo.textContent = tipo.rotulo;
+      grade.appendChild(rotulo);
+      for (const nota of NOTAS) {
+        const id = nota + tipo.sufixo;
+        const slot = document.createElement("button");
+        slot.className = "slot" + (ids.has(id) ? " cheio" : "");
+        slot.textContent = rotuloSlot(nota, tipo);
+        slot.dataset.id = id;
+        if (ids.has(id)) {
+          slot.title = "Tocar acorde";
+          slot.addEventListener("click", () => tocar(id, slot));
+        } else {
+          slot.disabled = true;
+        }
+        grade.appendChild(slot);
+      }
+    }
+
+    document.getElementById("acordes-contador-texto").textContent = `${ids.size}/${TOTAL}`;
+    document.getElementById("acordes-contador")
+      .classList.toggle("completo", ids.size >= TOTAL);
+  }
+
+  async function tocar(id, slot) {
+    try {
+      const reg = await DB.obter("acordes", id);
+      if (!reg) return;
+      if (audioAtual) {
+        audioAtual.pause();
+        URL.revokeObjectURL(audioAtual.src);
+        document.querySelectorAll(".slot.tocando").forEach((s) => s.classList.remove("tocando"));
+      }
+      const url = URL.createObjectURL(reg.blob);
+      const audio = new Audio(url);
+      audio.volume = CampoHarmonico.obterVolume();
+      audioAtual = audio;
+      slot.classList.add("tocando");
+      const limpar = () => {
+        slot.classList.remove("tocando");
+        URL.revokeObjectURL(url);
+      };
+      audio.onended = limpar;
+      audio.onerror = limpar;
+      audio.play().catch(limpar);
+    } catch (e) {
+      console.error("Erro ao tocar acorde:", e);
+    }
+  }
+
+  async function importar(arquivos) {
+    let importados = 0;
+    const ignorados = [];
+    for (const arquivo of arquivos) {
+      const info = analisarNome(arquivo.name);
+      if (info.erro) {
+        ignorados.push(`${arquivo.name} (${info.erro})`);
+        continue;
+      }
+      try {
+        await DB.salvar("acordes", {
+          id: info.id, blob: arquivo, tipo: info.tipo,
+          nota: info.nota, formato: info.formato,
+        });
+        importados++;
+      } catch (e) {
+        console.error("Erro ao salvar acorde:", e);
+        ignorados.push(`${arquivo.name} (erro ao salvar)`);
+      }
+    }
+
+    await atualizar();
+
+    resultado.hidden = false;
+    resultado.innerHTML = "";
+    const ok = document.createElement("div");
+    ok.textContent = `✅ ${importados} arquivo(s) importado(s).`;
+    resultado.appendChild(ok);
+    if (ignorados.length) {
+      const err = document.createElement("div");
+      err.className = "erro";
+      err.textContent = `⚠️ Não reconhecidos: ${ignorados.join(", ")}`;
+      resultado.appendChild(err);
+    }
+  }
+
+  // Botão de importar abre o seletor de arquivos
+  const input = document.getElementById("input-acordes");
+  document.getElementById("btn-importar").addEventListener("click", () => input.click());
+  input.addEventListener("change", () => {
+    if (input.files.length) importar([...input.files]);
+    input.value = ""; // permite reimportar os mesmos arquivos
+  });
+
+  return { atualizar };
+})();
+
+/* ==================================================================
+   Editor de jogos (Modo Professor): música + trechos + respostas
+   ================================================================== */
+const Editor = (() => {
+  // Opções de resposta alinhadas ao gráfico (VII° é mudo, não entra)
+  const OPCOES_N1 = [
+    { rotulo: "I",    grau: "I",    variacao: "fund" },
+    { rotulo: "IIm",  grau: "IIm",  variacao: "fund" },
+    { rotulo: "IIIm", grau: "IIIm", variacao: "fund" },
+    { rotulo: "IV",   grau: "IV",   variacao: "fund" },
+    { rotulo: "V",    grau: "V",    variacao: "fund" },
+    { rotulo: "VIm",  grau: "VIm",  variacao: "fund" },
+  ];
+  const OPCOES_N2 = OPCOES_N1.concat([
+    { rotulo: "I/3ª",  grau: "I",  variacao: "terca" },
+    { rotulo: "I/5ª",  grau: "I",  variacao: "quinta" },
+    { rotulo: "IV/3ª", grau: "IV", variacao: "terca" },
+    { rotulo: "V/3ª",  grau: "V",  variacao: "terca" },
+  ]);
+  const CORES = ["#38B6FF", "#CB6CE6", "#FF914D", "#6BDB54", "#FF66C4", "#FFD93D", "#2991CD", "#8C52FF"];
+  const EXTENSOES = ["mp3", "wav", "ogg", "m4a", "aac"];
+
+  const el = (id) => document.getElementById(id);
+  const campoNome = el("jogo-nome"), campoArtista = el("jogo-artista");
+  const campoTom = el("jogo-tom"), campoNivel = el("jogo-nivel");
+  const listaTrechos = el("lista-trechos");
+
+  // Seletor de tom (12 tons maiores)
+  for (const nota of CampoHarmonico.NOTAS) {
+    const op = document.createElement("option");
+    op.value = nota;
+    op.textContent = exibirNota(nota) + " maior";
+    campoTom.appendChild(op);
+  }
+
+  let ws = null, regioes = null;
+  let jogoEditando = null;     // jogo existente sendo editado (ou null)
+  let musicaExistente = null;  // registro da música quando editando
+  let arquivoNovo = null;      // File escolhido nesta sessão
+  let numTrecho = 0;
+  let regiaoTocando = null, regiaoLoop = null;
+
+  const fmtTempo = (s) => {
+    const m = Math.floor(s / 60), seg = (s % 60);
+    return `${m}:${seg < 10 ? "0" : ""}${seg.toFixed(1)}`;
+  };
+
+  const opcoesAtuais = () => (campoNivel.value === "2" ? OPCOES_N2 : OPCOES_N1);
+
+  function resetarBotoesOuvir() {
+    listaTrechos.querySelectorAll(".b-ouvir").forEach((b) => (b.textContent = "▶ Ouvir"));
+  }
+
+  const hexParaRgba = (hex, a) => {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  };
+
+  /* ---------- WaveSurfer ---------- */
+  function criarWaveSurfer(blob) {
+    if (ws) { ws.destroy(); ws = null; regioes = null; }
+    listaTrechos.innerHTML = "";
+    numTrecho = 0;
+    regiaoTocando = regiaoLoop = null;
+
+    ws = WaveSurfer.create({
+      container: "#waveform",
+      height: 100,
+      waveColor: "#b9b2a0",
+      progressColor: "#2e86c1",
+      cursorColor: "#e74c3c",
+      cursorWidth: 2,
+    });
+    regioes = ws.registerPlugin(WaveSurfer.Regions.create());
+
+    regioes.on("region-updated", (r) => {
+      const card = listaTrechos.querySelector(`[data-regiao="${r.id}"] .faixa`);
+      if (card) card.textContent = `${fmtTempo(r.start)} – ${fmtTempo(r.end)}`;
+    });
+    regioes.on("region-out", (r) => {
+      if (r !== regiaoTocando) return;
+      // Ignora "saída" provocada por pulo do cursor (seek)
+      if (ws.getCurrentTime() < r.end - 0.15) return;
+      if (regiaoLoop === r) r.play();
+      else {
+        ws.pause();
+        regiaoTocando = null;
+        resetarBotoesOuvir();
+      }
+    });
+    ws.on("timeupdate", (t) => {
+      el("tempo-editor").textContent = `${fmtTempo(t)} / ${fmtTempo(ws.getDuration() || 0)}`;
+    });
+    ws.on("decode", () => {
+      el("tempo-editor").textContent = `0:00 / ${fmtTempo(ws.getDuration())}`;
+      el("zoom-editor").value = 1;
+    });
+    ws.loadBlob(blob);
+    return ws;
+  }
+
+  /* ---------- Trechos ---------- */
+  function novoTrecho(dados) {
+    if (!ws || !ws.getDuration()) { alert("Escolha primeiro o arquivo da música. 🎵"); return; }
+    const dur = ws.getDuration();
+    const cor = dados?.cor || CORES[numTrecho % CORES.length];
+    const inicio = dados ? dados.inicio : Math.min(ws.getCurrentTime(), Math.max(0, dur - 1));
+    const fim = dados ? dados.fim : Math.min(inicio + 4, dur);
+    numTrecho++;
+    const regiao = regioes.addRegion({
+      start: inicio, end: fim,
+      color: hexParaRgba(cor, .3),
+      drag: true, resize: true,
+      content: String(numTrecho),
+    });
+    criarCard(regiao, cor, dados);
+  }
+
+  function preencherSelect(sel, valorAtual) {
+    sel.innerHTML = "";
+    for (const op of opcoesAtuais()) {
+      const o = document.createElement("option");
+      o.value = `${op.grau}|${op.variacao}`;
+      o.textContent = op.rotulo;
+      sel.appendChild(o);
+    }
+    if (valorAtual && [...sel.options].some((o) => o.value === valorAtual)) sel.value = valorAtual;
+  }
+
+  function criarCard(regiao, cor, dados) {
+    const card = document.createElement("div");
+    card.className = "painel trecho";
+    card.dataset.regiao = regiao.id;
+    card.dataset.cor = cor;
+
+    const cab = document.createElement("div");
+    cab.className = "trecho-cab";
+    cab.innerHTML =
+      `<span class="cor-chip" style="background:${cor}"></span>` +
+      `<b>Trecho</b>` +
+      `<span class="faixa">${fmtTempo(regiao.start)} – ${fmtTempo(regiao.end)}</span>` +
+      `<button class="b-ouvir">▶ Ouvir</button>` +
+      `<button class="b-loop">🔁 Loop</button>` +
+      `<button class="b-excluir">🗑️ Excluir</button>`;
+
+    const resp = document.createElement("div");
+    resp.className = "trecho-resp";
+    resp.innerHTML =
+      `<label>✅ Acorde correto <select class="s-correto"></select></label>` +
+      `<label>Alternativa errada 1 <select class="s-d1"></select></label>` +
+      `<label>Alternativa errada 2 <select class="s-d2"></select></label>` +
+      `<button class="btn secundario b-sortear">🎲 Sortear erradas</button>`;
+
+    card.append(cab, resp);
+    listaTrechos.appendChild(card);
+    card.scrollIntoView({ block: "nearest" }); // novo trecho já aparece à vista
+
+    const selCorreto = resp.querySelector(".s-correto");
+    const selD1 = resp.querySelector(".s-d1");
+    const selD2 = resp.querySelector(".s-d2");
+    preencherSelect(selCorreto);
+    preencherSelect(selD1);
+    preencherSelect(selD2);
+
+    if (dados) {
+      selCorreto.value = `${dados.correto.grau}|${dados.correto.variacao}`;
+      selD1.value = `${dados.alternativas[0].grau}|${dados.alternativas[0].variacao}`;
+      selD2.value = `${dados.alternativas[1].grau}|${dados.alternativas[1].variacao}`;
+    } else {
+      sortear(selCorreto, selD1, selD2);
+    }
+
+    cab.querySelector(".b-ouvir").addEventListener("click", (e) => {
+      const btn = e.currentTarget;
+      if (regiaoTocando === regiao && ws.isPlaying()) {
+        ws.pause(); // pausa no meio do trecho
+        btn.textContent = "▶ Ouvir";
+        return;
+      }
+      resetarBotoesOuvir();
+      regiaoTocando = regiao;
+      // Se pausou no meio deste trecho, retoma de onde parou
+      const t = ws.getCurrentTime();
+      if (t > regiao.start && t < regiao.end - 0.05) ws.play();
+      else regiao.play();
+      btn.textContent = "⏸ Pausar";
+    });
+    cab.querySelector(".b-loop").addEventListener("click", (e) => {
+      const btn = e.currentTarget;
+      if (regiaoLoop === regiao) {
+        regiaoLoop = null;
+        btn.classList.remove("ativo");
+      } else {
+        regiaoLoop = regiao;
+        document.querySelectorAll(".b-loop.ativo").forEach((b) => b.classList.remove("ativo"));
+        btn.classList.add("ativo");
+        resetarBotoesOuvir();
+        regiaoTocando = regiao;
+        regiao.play();
+        card.querySelector(".b-ouvir").textContent = "⏸ Pausar";
+      }
+    });
+    cab.querySelector(".b-excluir").addEventListener("click", () => {
+      if (regiaoLoop === regiao) regiaoLoop = null;
+      if (regiaoTocando === regiao) { regiaoTocando = null; ws.pause(); }
+      regiao.remove();
+      card.remove();
+    });
+    resp.querySelector(".b-sortear").addEventListener("click", () => sortear(selCorreto, selD1, selD2, true));
+  }
+
+  // Sorteia 2 alternativas erradas diferentes do correto (e entre si)
+  function sortear(selCorreto, selD1, selD2, manterCorreto) {
+    const pool = opcoesAtuais().map((o) => `${o.grau}|${o.variacao}`);
+    const correto = manterCorreto ? selCorreto.value : pool[Math.floor(Math.random() * pool.length)];
+    if (!manterCorreto) selCorreto.value = correto;
+    const erradas = pool.filter((v) => v !== correto);
+    for (let i = erradas.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [erradas[i], erradas[j]] = [erradas[j], erradas[i]];
+    }
+    selD1.value = erradas[0];
+    selD2.value = erradas[1];
+  }
+
+  // Mudou o nível → refaz as opções dos selects (preserva o que ainda vale)
+  campoNivel.addEventListener("change", () => {
+    for (const sel of listaTrechos.querySelectorAll("select")) {
+      preencherSelect(sel, sel.value);
+    }
+  });
+
+  /* ---------- Abrir editor ---------- */
+  function limparFormulario() {
+    jogoEditando = null;
+    musicaExistente = null;
+    arquivoNovo = null;
+    campoNome.value = "";
+    campoArtista.value = "";
+    campoTom.value = "C";
+    campoNivel.value = "1";
+    el("musica-nome-arquivo").textContent = "";
+    el("editor-titulo").textContent = "🎼 Novo jogo";
+    listaTrechos.innerHTML = "";
+    if (ws) { ws.destroy(); ws = null; regioes = null; }
+    el("tempo-editor").textContent = "0:00 / 0:00";
+  }
+
+  function novo() {
+    limparFormulario();
+    Rotas.ir("editor");
+  }
+
+  async function editar(jogo) {
+    limparFormulario();
+    jogoEditando = jogo;
+    el("editor-titulo").textContent = "✏️ Editar jogo";
+    campoNome.value = jogo.nome;
+    campoTom.value = jogo.tom;
+    campoNivel.value = String(jogo.nivel);
+    try {
+      musicaExistente = await DB.obter("musicas", jogo.musicaId);
+      if (musicaExistente) {
+        campoArtista.value = musicaExistente.artista || "";
+        el("musica-nome-arquivo").textContent = `Música salva no app (${musicaExistente.formato})`;
+        criarWaveSurfer(musicaExistente.blob);
+        ws.on("decode", () => {
+          for (const t of jogo.trechos) novoTrecho(t);
+        });
+      }
+    } catch (e) {
+      console.error("Erro ao carregar música:", e);
+    }
+    Rotas.ir("editor");
+  }
+
+  /* ---------- Salvar ---------- */
+  async function salvar() {
+    const nome = campoNome.value.trim();
+    if (!nome) { alert("Dê um nome à música. ✏️"); return; }
+    if (!ws || !ws.getDuration()) { alert("Escolha o arquivo da música. 🎵"); return; }
+
+    const cards = [...listaTrechos.querySelectorAll(".trecho")];
+    if (!cards.length) { alert("Crie pelo menos um trecho. ➕"); return; }
+
+    const regioesAtivas = new Map(regioes.getRegions().map((r) => [r.id, r]));
+    const trechos = [];
+    for (const card of cards) {
+      const r = regioesAtivas.get(card.dataset.regiao);
+      if (!r) continue;
+      const v = (sel) => {
+        const [grau, variacao] = card.querySelector(sel).value.split("|");
+        return { grau, variacao };
+      };
+      const correto = v(".s-correto"), d1 = v(".s-d1"), d2 = v(".s-d2");
+      const iguais = (a, b) => a.grau === b.grau && a.variacao === b.variacao;
+      if (iguais(correto, d1) || iguais(correto, d2) || iguais(d1, d2)) {
+        alert("Num dos trechos há alternativas repetidas — as 3 opções precisam ser diferentes. 🎲");
+        return;
+      }
+      trechos.push({
+        inicio: Math.round(r.start * 10) / 10,
+        fim: Math.round(r.end * 10) / 10,
+        cor: card.dataset.cor,
+        correto,
+        alternativas: [d1, d2],
+      });
+    }
+    trechos.sort((a, b) => a.inicio - b.inicio);
+
+    try {
+      // Música: nova ou reaproveitada da edição
+      let musicaId = jogoEditando?.musicaId;
+      if (arquivoNovo || !musicaId) {
+        musicaId = musicaId || crypto.randomUUID();
+        await DB.salvar("musicas", {
+          id: musicaId,
+          nome,
+          artista: campoArtista.value.trim(),
+          blob: arquivoNovo || musicaExistente.blob,
+          formato: arquivoNovo
+            ? arquivoNovo.name.slice(arquivoNovo.name.lastIndexOf(".") + 1).toLowerCase()
+            : musicaExistente.formato,
+          duracao: ws.getDuration(),
+        });
+      } else if (musicaExistente) {
+        musicaExistente.nome = nome;
+        musicaExistente.artista = campoArtista.value.trim();
+        await DB.salvar("musicas", musicaExistente);
+      }
+
+      await DB.salvar("jogos", {
+        id: jogoEditando?.id || crypto.randomUUID(),
+        nome,
+        musicaId,
+        tom: campoTom.value,
+        nivel: Number(campoNivel.value),
+        criadoEm: jogoEditando?.criadoEm || new Date().toISOString(),
+        trechos,
+        recorde: jogoEditando?.recorde || null,
+      });
+
+      alert(`Jogo "${nome}" salvo! 🎉`);
+      Rotas.ir("professor");
+    } catch (e) {
+      console.error("Erro ao salvar jogo:", e);
+      alert("Erro ao salvar o jogo. Tente novamente.");
+    }
+  }
+
+  /* ---------- Eventos ---------- */
+  el("btn-musica").addEventListener("click", () => el("input-musica").click());
+  el("input-musica").addEventListener("change", () => {
+    const arq = el("input-musica").files[0];
+    if (!arq) return;
+    const ext = arq.name.slice(arq.name.lastIndexOf(".") + 1).toLowerCase();
+    if (!EXTENSOES.includes(ext)) {
+      alert("Formato não aceito. Use MP3, WAV, OGG ou M4A/AAC.");
+      return;
+    }
+    arquivoNovo = arq;
+    el("musica-nome-arquivo").textContent = arq.name;
+    if (!campoNome.value.trim()) {
+      campoNome.value = arq.name.slice(0, arq.name.lastIndexOf("."));
+    }
+    criarWaveSurfer(arq);
+    el("input-musica").value = "";
+  });
+  el("btn-play-editor").addEventListener("click", () => {
+    if (!ws) return;
+    regiaoTocando = null; // play livre, sem parar no fim de trecho
+    resetarBotoesOuvir();
+    ws.playPause();
+  });
+  el("btn-novo-trecho").addEventListener("click", () => novoTrecho());
+  el("zoom-editor").addEventListener("input", (e) => {
+    if (ws && ws.getDuration()) ws.zoom(Number(e.target.value));
+  });
+  el("btn-salvar-jogo").addEventListener("click", salvar);
+
+  function pausar() { if (ws) ws.pause(); }
+
+  return { novo, editar, pausar };
+})();
+
+/* ==================================================================
+   Lista de jogos no Modo Professor (editar / duplicar / excluir)
+   ================================================================== */
+const ProfessorJogos = (() => {
+  const lista = document.getElementById("lista-jogos-prof");
+
+  async function atualizar() {
+    try {
+      const jogos = await DB.listar("jogos");
+      lista.innerHTML = "";
+      if (!jogos.length) {
+        lista.innerHTML = `<p class="nota-rodape">Nenhum jogo criado ainda.</p>`;
+        return;
+      }
+      for (const jogo of jogos) {
+        const linha = document.createElement("div");
+        linha.className = "jogo-prof";
+        const titulo = document.createElement("span");
+        titulo.className = "titulo";
+        titulo.textContent = jogo.nome;
+        const det = document.createElement("span");
+        det.className = "detalhes";
+        det.textContent = `Tom ${exibirNota(jogo.tom)} · Nível ${jogo.nivel} · ${jogo.trechos.length} trecho(s)`;
+        const bEditar = document.createElement("button");
+        bEditar.textContent = "✏️ Editar";
+        bEditar.addEventListener("click", () => Editor.editar(jogo));
+        const bDuplicar = document.createElement("button");
+        bDuplicar.textContent = "📄 Duplicar";
+        bDuplicar.addEventListener("click", async () => {
+          const copia = structuredClone(jogo);
+          copia.id = crypto.randomUUID();
+          copia.nome = jogo.nome + " (cópia)";
+          copia.recorde = null;
+          copia.criadoEm = new Date().toISOString();
+          await DB.salvar("jogos", copia);
+          atualizar();
+        });
+        const bExcluir = document.createElement("button");
+        bExcluir.textContent = "🗑️ Excluir";
+        bExcluir.addEventListener("click", async () => {
+          if (!confirm(`Excluir o jogo "${jogo.nome}"?`)) return;
+          await DB.excluir("jogos", jogo.id);
+          // Remove a música se nenhum outro jogo a usa
+          const restantes = await DB.listar("jogos");
+          if (!restantes.some((j) => j.musicaId === jogo.musicaId)) {
+            await DB.excluir("musicas", jogo.musicaId);
+          }
+          atualizar();
+        });
+        linha.append(titulo, det, bEditar, bDuplicar, bExcluir);
+        lista.appendChild(linha);
+      }
+    } catch (e) {
+      console.error("Erro ao listar jogos:", e);
+    }
+  }
+
+  document.getElementById("btn-novo-jogo").addEventListener("click", () => Editor.novo());
+
+  return { atualizar };
+})();
+
+/* ==================================================================
+   Modo Aluno: o jogo — ouvir trechos, escolher entre 3 alternativas,
+   feedback sem punição, pontuação e recorde
+   ================================================================== */
+const Jogo = (() => {
+  const el = (id) => document.getElementById(id);
+  const hexRgba = (hex, a) => {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  };
+
+  let jogo = null, musica = null, ws = null, regioes = null, listaRegioes = [];
+  let indice = 0, pontos = 0, selecionado = null, respondido = false;
+  let loop = false;
+  // O que está tocando: {tipo:"trecho"} (atual) | {tipo:"antigo",i} | {tipo:"seq",i} | null
+  let reproducao = null;
+
+  const ativo = () => !!jogo;
+  // Índice do último trecho já jogado (liberado para reouvir)
+  const ultimoRespondido = () => (respondido ? indice : indice - 1);
+
+  function pausar() {
+    if (ws) ws.pause();
+    reproducao = null;
+    atualizarBotoes();
+  }
+  function pararReproducao() {
+    if (ws) ws.pause();
+    reproducao = null;
+    atualizarBotoes();
+  }
+
+  function atualizarPlacar() {
+    el("jogo-placar").textContent =
+      `Trecho ${indice + 1}/${jogo.trechos.length} · ✔ ${pontos}`;
+  }
+  function atualizarBotoes() {
+    el("btn-tocar-trecho").textContent =
+      reproducao?.tipo === "trecho" ? "⏸ Pausar" : "▶ Tocar trecho";
+    const bSeq = el("btn-ouvir-jogados");
+    bSeq.disabled = !jogo || ultimoRespondido() < 0;
+    bSeq.classList.toggle("ativo", reproducao?.tipo === "seq");
+  }
+  // Trecho atual em destaque; já jogados visíveis; futuros quase apagados (bloqueados)
+  function atualizarCoresRegioes() {
+    listaRegioes.forEach((r, i) => {
+      const alfa = i === indice ? .5 : i <= ultimoRespondido() ? .3 : .08;
+      r.setOptions({ color: hexRgba(jogo.trechos[i].cor, alfa) });
+    });
+  }
+
+  /* ---------- Início ---------- */
+  async function iniciar(j) {
+    jogo = j;
+    indice = 0;
+    pontos = 0;
+    Rotas.ir("jogo");
+    el("jogo-titulo").textContent = "🎮 " + jogo.nome; // tom NUNCA aparece
+    try {
+      musica = await DB.obter("musicas", jogo.musicaId);
+    } catch (e) {
+      console.error(e);
+    }
+    if (!musica) {
+      alert("A música deste jogo não foi encontrada no aparelho. 😕");
+      jogo = null;
+      Rotas.ir("biblioteca");
+      return;
+    }
+    if (ws) { ws.destroy(); ws = null; }
+    ws = WaveSurfer.create({
+      container: "#waveform-jogo",
+      height: 90,
+      waveColor: "#c9c2b0",
+      progressColor: "#2e86c1",
+      cursorColor: "#e74c3c",
+      cursorWidth: 2,
+      interact: false, // aluno não arrasta o cursor
+    });
+    regioes = ws.registerPlugin(WaveSurfer.Regions.create());
+    ws.on("decode", () => {
+      listaRegioes = jogo.trechos.map((t, i) =>
+        regioes.addRegion({
+          start: t.inicio, end: t.fim,
+          color: hexRgba(t.cor, .15),
+          drag: false, resize: false,
+          content: String(i + 1),
+        })
+      );
+      prepararTrecho();
+    });
+    regioes.on("region-out", (r) => {
+      if (!reproducao) return;
+      // Ignora "saída" provocada por pulo do cursor (seek) — só vale
+      // quando a reprodução chegou de fato ao fim da região
+      if (ws.getCurrentTime() < r.end - 0.15) return;
+      const i = listaRegioes.indexOf(r);
+      if (reproducao.tipo === "trecho" && i === indice) {
+        if (loop) r.play();
+        else pararReproducao();
+      } else if (reproducao.tipo === "seq" && i === reproducao.i) {
+        if (i < ultimoRespondido()) {
+          reproducao.i = i + 1;
+          listaRegioes[reproducao.i].play(); // emenda no próximo já jogado
+        } else pararReproducao();
+      } else if (reproducao.tipo === "antigo" && i === reproducao.i) {
+        pararReproducao();
+      }
+    });
+    // Tocar direto na região da onda: liberado só para trechos já jogados (e o atual)
+    regioes.on("region-clicked", (r, e) => {
+      e?.stopPropagation?.();
+      const i = listaRegioes.indexOf(r);
+      if (i > ultimoRespondido() && i !== indice) return; // ainda bloqueado
+      reproducao = i === indice ? { tipo: "trecho" } : { tipo: "antigo", i };
+      r.play();
+      atualizarBotoes();
+    });
+    ws.loadBlob(musica.blob);
+  }
+
+  /* ---------- Cada trecho ---------- */
+  function prepararTrecho() {
+    respondido = false;
+    selecionado = null;
+    reproducao = null;
+    atualizarPlacar();
+    atualizarBotoes();
+    atualizarCoresRegioes();
+    ws.setTime(jogo.trechos[indice].inicio);
+
+    // Gráfico: nível 1 esconde inversões; acordes mudos se o aluno preferir
+    const campo = el("campo-jogo");
+    CampoHarmonico.renderizar(campo, jogo.tom, {
+      inversoes: jogo.nivel === 2,
+      mudo: () => acordesMudos,
+    });
+
+    const t = jogo.trechos[indice];
+    const alternativas = [t.correto, ...t.alternativas];
+    for (const btn of campo.querySelectorAll(".grau")) {
+      if (btn.disabled) continue; // VII° segue mudo
+      const ehAlternativa = !btn.dataset.oitava && alternativas.some(
+        (a) => a.grau === btn.dataset.grau && a.variacao === btn.dataset.variacao
+      );
+      btn.classList.add(ehAlternativa ? "alternativa" : "esmaecido");
+      if (ehAlternativa) btn.addEventListener("click", () => selecionar(btn));
+    }
+
+    el("btn-responder").disabled = true;
+    el("btn-responder").hidden = false;
+    el("btn-proximo").hidden = true;
+    el("feedback-jogo").hidden = true;
+  }
+
+  function selecionar(btn) {
+    if (respondido) return;
+    el("campo-jogo").querySelectorAll(".selecionada")
+      .forEach((b) => b.classList.remove("selecionada"));
+    btn.classList.add("selecionada");
+    selecionado = { grau: btn.dataset.grau, variacao: btn.dataset.variacao };
+    el("btn-responder").disabled = false;
+  }
+
+  /* ---------- Responder ---------- */
+  function responder() {
+    if (!selecionado || respondido) return;
+    respondido = true;
+    const t = jogo.trechos[indice];
+    const acertou = selecionado.grau === t.correto.grau &&
+                    selecionado.variacao === t.correto.variacao;
+
+    const campo = el("campo-jogo");
+    const botaoDe = (g) => [...campo.querySelectorAll(".grau")].find(
+      (b) => !b.dataset.oitava && b.dataset.grau === g.grau && b.dataset.variacao === g.variacao
+    );
+    const bCerto = botaoDe(t.correto);
+    bCerto?.classList.add("brilha");
+
+    const fb = el("feedback-jogo");
+    fb.hidden = false;
+    if (acertou) {
+      pontos++;
+      fb.textContent = "🎉 Acertou! Muito bem!";
+      fb.className = "feedback-jogo acerto";
+      somSucesso();
+      confete();
+    } else {
+      campo.querySelector(".selecionada")?.classList.add("errada");
+      fb.textContent = `Quase! O certo era ${bCerto?.textContent || ""} — ouça e compare. 👂`;
+      fb.className = "feedback-jogo erro";
+      bCerto?.click(); // toca o acorde correto (sem punição, foco em comparar)
+    }
+    atualizarPlacar();
+    atualizarBotoes();        // libera o "Ouvir já jogados" ao responder
+    atualizarCoresRegioes();  // este trecho passa a contar como jogado
+
+    el("btn-responder").hidden = true;
+    const ultimo = indice === jogo.trechos.length - 1;
+    el("btn-proximo").textContent = ultimo ? "Ver resultado 🏁" : "Próximo trecho ➡";
+    el("btn-proximo").hidden = false;
+  }
+
+  function proximo() {
+    if (indice < jogo.trechos.length - 1) {
+      indice++;
+      prepararTrecho();
+    } else {
+      mostrarResultado();
+    }
+  }
+
+  /* ---------- Resultado ---------- */
+  async function mostrarResultado() {
+    pausar();
+    const total = jogo.trechos.length;
+    const pct = pontos / total;
+    const estrelas = pct >= 1 ? 3 : pct >= 0.6 ? 2 : 1;
+    el("resultado-estrelas").textContent = "⭐".repeat(estrelas) + "☆".repeat(3 - estrelas);
+    el("resultado-placar").textContent = `Você acertou ${pontos} de ${total} trechos!`;
+
+    let msgRecorde = "";
+    if (!jogo.recorde || pontos > jogo.recorde.acertos) {
+      jogo.recorde = { acertos: pontos, total, data: new Date().toISOString() };
+      try {
+        await DB.salvar("jogos", jogo);
+        msgRecorde = "🏆 Novo recorde!";
+      } catch (e) {
+        console.error("Erro ao salvar recorde:", e);
+      }
+    } else {
+      msgRecorde = `Recorde atual: ${jogo.recorde.acertos}/${jogo.recorde.total}`;
+    }
+    el("resultado-recorde").textContent = msgRecorde;
+    el("modal-resultado").classList.add("aberto");
+  }
+
+  /* ---------- Sons e confete ---------- */
+  let ctxAudio = null;
+  function somSucesso() {
+    try {
+      ctxAudio = ctxAudio || new (window.AudioContext || window.webkitAudioContext)();
+      [660, 880].forEach((freq, i) => {
+        const osc = ctxAudio.createOscillator();
+        const gain = ctxAudio.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(ctxAudio.destination);
+        const t0 = ctxAudio.currentTime + i * 0.13;
+        gain.gain.setValueAtTime(0.001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.25, t0 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.28);
+        osc.start(t0);
+        osc.stop(t0 + 0.3);
+      });
+    } catch (e) { /* sem som, sem problema */ }
+  }
+
+  function confete() {
+    const area = document.createElement("div");
+    area.className = "confete-area";
+    const cores = ["#287F0C", "#38B6FF", "#6BDB54", "#2991CD", "#CB6CE6", "#FF66C4", "#FFD94F"];
+    for (let i = 0; i < 40; i++) {
+      const p = document.createElement("span");
+      p.className = "confete";
+      p.style.left = Math.random() * 100 + "vw";
+      p.style.background = cores[i % cores.length];
+      p.style.animationDuration = (1.2 + Math.random() * 1.2) + "s";
+      p.style.animationDelay = (Math.random() * 0.4) + "s";
+      area.appendChild(p);
+    }
+    document.body.appendChild(area);
+    setTimeout(() => area.remove(), 2600);
+  }
+
+  /* ---------- Acordes mudos (aluno com instrumento em mãos) ---------- */
+  let acordesMudos = localStorage.getItem("oh.acordesMudos") === "1";
+  function atualizarBotaoMudo() {
+    const b = el("btn-mudo");
+    b.textContent = acordesMudos ? "🔇 Acordes mudos" : "🔊 Acordes";
+    b.classList.toggle("ativo", acordesMudos);
+  }
+  el("btn-mudo").addEventListener("click", () => {
+    acordesMudos = !acordesMudos;
+    localStorage.setItem("oh.acordesMudos", acordesMudos ? "1" : "0");
+    atualizarBotaoMudo();
+  });
+  atualizarBotaoMudo();
+
+  /* ---------- Eventos ---------- */
+  el("btn-tocar-trecho").addEventListener("click", () => {
+    if (!ws || !listaRegioes[indice]) return;
+    if (reproducao?.tipo === "trecho") {
+      pararReproducao();
+    } else {
+      reproducao = { tipo: "trecho" };
+      listaRegioes[indice].play();
+      atualizarBotoes();
+    }
+  });
+  el("btn-ouvir-jogados").addEventListener("click", () => {
+    if (!ws || ultimoRespondido() < 0) return;
+    if (reproducao?.tipo === "seq") {
+      pararReproducao();
+    } else {
+      reproducao = { tipo: "seq", i: 0 };
+      listaRegioes[0].play(); // toca todos os já jogados em sequência
+      atualizarBotoes();
+    }
+  });
+  el("btn-loop-trecho").addEventListener("click", (e) => {
+    loop = !loop;
+    e.currentTarget.classList.toggle("ativo", loop);
+    e.currentTarget.textContent = loop ? "🔁 Loop LIGADO" : "🔁 Loop";
+  });
+  el("btn-responder").addEventListener("click", responder);
+  el("btn-proximo").addEventListener("click", proximo);
+  el("btn-jogar-denovo").addEventListener("click", () => {
+    el("modal-resultado").classList.remove("aberto");
+    indice = 0;
+    pontos = 0;
+    prepararTrecho();
+  });
+  el("btn-voltar-biblioteca").addEventListener("click", () => {
+    el("modal-resultado").classList.remove("aberto");
+    jogo = null;
+    Rotas.ir("biblioteca");
+  });
+
+  return { iniciar, ativo, pausar };
+})();
+
+/* ==================================================================
+   Backup: exportar/importar tudo num arquivo .json
+   (jogos + músicas + acordes, com áudios opcionais em base64)
+   ================================================================== */
+const Backup = (() => {
+  const el = (id) => document.getElementById(id);
+  const status = (t) => { el("backup-status").textContent = t; };
+
+  const blobParaBase64 = (blob) => new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result); // dataURL (guarda o tipo do áudio)
+    fr.onerror = () => rej(fr.error);
+    fr.readAsDataURL(blob);
+  });
+  const base64ParaBlob = async (dataUrl) => (await fetch(dataUrl)).blob();
+
+  // Monta o backup em memória (separado do download para poder testar)
+  async function gerarBackup(incluirAudios) {
+    const [jogos, musicas, acordes] = await Promise.all([
+      DB.listar("jogos"), DB.listar("musicas"), DB.listar("acordes"),
+    ]);
+    const dados = {
+      app: "ouvido-harmonico", versao: 1,
+      criadoEm: new Date().toISOString(),
+      incluiAudios: incluirAudios,
+      jogos, musicas: [], acordes: [],
+    };
+    let i = 0;
+    for (const m of musicas) {
+      status(`Convertendo músicas… ${++i}/${musicas.length}`);
+      const { blob, ...meta } = m;
+      dados.musicas.push(incluirAudios ? { ...meta, audio: await blobParaBase64(blob) } : meta);
+    }
+    if (incluirAudios) {
+      i = 0;
+      for (const a of acordes) {
+        status(`Convertendo acordes… ${++i}/${acordes.length}`);
+        const { blob, ...meta } = a;
+        dados.acordes.push({ ...meta, audio: await blobParaBase64(blob) });
+      }
+    }
+    return dados;
+  }
+
+  async function exportar() {
+    try {
+      status("Preparando backup…");
+      const dados = await gerarBackup(el("backup-incluir-audios").checked);
+      const arquivo = new Blob([JSON.stringify(dados)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(arquivo);
+      a.download = `ouvido-harmonico-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      status(`✅ Backup exportado (${(arquivo.size / 1048576).toFixed(1)} MB): ` +
+        `${dados.jogos.length} jogo(s), ${dados.musicas.length} música(s), ${dados.acordes.length} acorde(s).`);
+    } catch (e) {
+      console.error("Erro ao exportar:", e);
+      status("❌ Erro ao exportar: " + e.message);
+    }
+  }
+
+  async function importar(dados) {
+    try {
+      if (dados.app !== "ouvido-harmonico") {
+        status("❌ Este arquivo não é um backup do Ouvido Harmônico.");
+        return;
+      }
+      const nJ = dados.jogos?.length || 0;
+      const nM = dados.musicas?.length || 0;
+      const nA = dados.acordes?.length || 0;
+      if (!confirm(`Importar ${nJ} jogo(s), ${nM} música(s) e ${nA} acorde(s)?\nItens repetidos serão substituídos.`)) {
+        status("Importação cancelada.");
+        return;
+      }
+      let i = 0;
+      for (const m of dados.musicas || []) {
+        status(`Importando músicas… ${++i}/${nM}`);
+        const { audio, ...meta } = m;
+        if (audio) {
+          await DB.salvar("musicas", { ...meta, blob: await base64ParaBlob(audio) });
+        } else {
+          // Backup sem áudios: atualiza os dados mas preserva o áudio local
+          const existente = await DB.obter("musicas", m.id);
+          if (existente) await DB.salvar("musicas", { ...existente, ...meta, blob: existente.blob });
+        }
+      }
+      i = 0;
+      for (const a of dados.acordes || []) {
+        status(`Importando acordes… ${++i}/${nA}`);
+        const { audio, ...meta } = a;
+        if (audio) await DB.salvar("acordes", { ...meta, blob: await base64ParaBlob(audio) });
+      }
+      for (const j of dados.jogos || []) await DB.salvar("jogos", j);
+
+      const musicasIds = new Set((await DB.listar("musicas")).map((m) => m.id));
+      const semMusica = (dados.jogos || []).filter((j) => !musicasIds.has(j.musicaId)).length;
+      status(`✅ Importado: ${nJ} jogo(s), ${nM} música(s), ${nA} acorde(s).` +
+        (semMusica ? ` ⚠️ ${semMusica} jogo(s) ficaram sem o áudio da música (backup sem áudios).` : ""));
+      ProfessorJogos.atualizar();
+    } catch (e) {
+      console.error("Erro ao importar:", e);
+      status("❌ Erro ao importar: " + e.message);
+    }
+  }
+
+  el("btn-exportar").addEventListener("click", exportar);
+  el("btn-importar-backup").addEventListener("click", () => el("input-backup").click());
+  el("input-backup").addEventListener("change", async () => {
+    const f = el("input-backup").files[0];
+    el("input-backup").value = "";
+    if (!f) return;
+    status("Lendo arquivo…");
+    try {
+      importar(JSON.parse(await f.text()));
+    } catch (e) {
+      status("❌ Arquivo inválido: não foi possível ler o backup.");
+    }
+  });
+
+  return { gerarBackup, importar };
+})();
+
+/* ==================================================================
+   Inicialização
+   ================================================================== */
+// Botões de navegação declarados no HTML (data-nav="...")
+document.querySelectorAll("[data-nav]").forEach((btn) => {
+  btn.addEventListener("click", () => Rotas.ir(btn.dataset.nav));
+});
+
+// Sliders de volume dos acordes (jogo + professor) sempre em sincronia
+{
+  const sliders = [
+    document.getElementById("volume-acordes-jogo"),
+    document.getElementById("volume-acordes-teste"),
+  ];
+  const valorInicial = Math.round(CampoHarmonico.obterVolume() * 100);
+  for (const s of sliders) {
+    s.value = valorInicial;
+    s.addEventListener("input", () => {
+      CampoHarmonico.definirVolume(Number(s.value) / 100);
+      for (const outro of sliders) if (outro !== s) outro.value = s.value;
+    });
+  }
+}
+
+// Armazenamento persistente (evita o sistema apagar os áudios do IndexedDB)
+if (navigator.storage?.persist) {
+  navigator.storage.persist().catch(() => {});
+}
+
+// Service Worker (offline após o primeiro carregamento)
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch((e) =>
+      console.warn("Service Worker não registrado:", e)
+    );
+  });
+}
+
+Rotas.iniciar();
+</script>
+</body>
+</html>

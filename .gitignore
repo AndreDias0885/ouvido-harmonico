@@ -1,0 +1,10 @@
+# Materiais locais do André — NÃO publicar
+Reaper/
+piano-visualizer/
+
+# Documentos e temporários
+*.docx
+~$*
+spec_extracted.txt
+fonts-css-temp.txt
+icon192.b64
