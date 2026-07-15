@@ -1200,6 +1200,20 @@ const Editor = (() => {
     listaTrechos.querySelectorAll(".b-ouvir").forEach((b) => (b.textContent = "▶ Ouvir"));
   }
 
+  // Anti-estalo: pula o cursor em silêncio e sobe o volume numa rampa curta
+  let fadeTimerEd = null;
+  function pularSuaveEd(regiao) {
+    if (fadeTimerEd) { clearInterval(fadeTimerEd); fadeTimerEd = null; }
+    ws.setVolume(0);
+    regiao.play();
+    let passo = 0;
+    fadeTimerEd = setInterval(() => {
+      passo++;
+      try { ws.setVolume(Math.min(1, passo / 5)); } catch (e) { passo = 5; }
+      if (passo >= 5) { clearInterval(fadeTimerEd); fadeTimerEd = null; }
+    }, 16);
+  }
+
   const hexParaRgba = (hex, a) => {
     const n = parseInt(hex.slice(1), 16);
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
@@ -1302,7 +1316,7 @@ const Editor = (() => {
       if (r !== regiaoTocando) return;
       // Ignora "saída" provocada por pulo do cursor (seek)
       if (ws.getCurrentTime() < r.end - 0.15) return;
-      if (regiaoLoop === r) r.play();
+      if (regiaoLoop === r) pularSuaveEd(r);
       else {
         ws.pause();
         regiaoTocando = null;
@@ -1407,7 +1421,7 @@ const Editor = (() => {
       // Se pausou no meio deste trecho, retoma de onde parou
       const t = ws.getCurrentTime();
       if (t > regiao.start && t < regiao.end - 0.05) ws.play();
-      else regiao.play();
+      else pularSuaveEd(regiao);
       btn.textContent = "⏸ Pausar";
     });
     cab.querySelector(".b-loop").addEventListener("click", (e) => {
@@ -1421,7 +1435,7 @@ const Editor = (() => {
         btn.classList.add("ativo");
         resetarBotoesOuvir();
         regiaoTocando = regiao;
-        regiao.play();
+        pularSuaveEd(regiao);
         card.querySelector(".b-ouvir").textContent = "⏸ Pausar";
       }
     });
@@ -1704,6 +1718,27 @@ const Jogo = (() => {
     atualizarBotoes();
   }
 
+  /* Anti-estalo: saltos de cursor cortam a onda no meio e estalam.
+     pularSuave = silencia, pula e sobe o volume numa rampa curta.
+     emendar = se a próxima região está encostada, segue tocando direto. */
+  let fadeTimer = null;
+  function pularSuave(regiao) {
+    if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
+    ws.setVolume(0);
+    regiao.play();
+    let passo = 0;
+    fadeTimer = setInterval(() => {
+      passo++;
+      try { ws.setVolume(Math.min(1, passo / 5)); } catch (e) { passo = 5; }
+      if (passo >= 5) { clearInterval(fadeTimer); fadeTimer = null; }
+    }, 16);
+  }
+  function emendar(regiao) {
+    // regiões contíguas: o cursor já está na fronteira — não pula, não estala
+    if (Math.abs(ws.getCurrentTime() - regiao.start) < 0.08) return;
+    pularSuave(regiao); // havia um vão entre os trechos: pula com fade
+  }
+
   function atualizarPlacar() {
     el("jogo-placar").textContent =
       `Trecho ${indice + 1}/${jogo.trechos.length} · ✔ ${pontos}`;
@@ -1781,19 +1816,19 @@ const Jogo = (() => {
           // Terminou o trecho anterior → emenda no atual (mesmo que o loop
           // tenha sido desligado no meio: termina a passada e para lá)
           reproducao.i = indice;
-          listaRegioes[indice].play();
+          emendar(listaRegioes[indice]);
         } else if (i === indice) {
-          if (modoLoop === "atual") r.play();
+          if (modoLoop === "atual") pularSuave(r);
           else if (comAnterior) {
             // fim do atual → volta ao início do trecho anterior
             reproducao.i = indice - 1;
-            listaRegioes[indice - 1].play();
+            pularSuave(listaRegioes[indice - 1]);
           } else pararReproducao();
         }
       } else if (reproducao.tipo === "seq" && i === reproducao.i) {
         if (i < ultimoRespondido()) {
           reproducao.i = i + 1;
-          listaRegioes[reproducao.i].play(); // emenda no próximo já jogado
+          emendar(listaRegioes[reproducao.i]); // emenda no próximo já jogado
         } else pararReproducao();
       } else if (reproducao.tipo === "antigo" && i === reproducao.i) {
         pararReproducao();
@@ -1805,7 +1840,7 @@ const Jogo = (() => {
       const i = listaRegioes.indexOf(r);
       if (i > ultimoRespondido() && i !== indice) return; // ainda bloqueado
       reproducao = i === indice ? { tipo: "trecho", i: indice } : { tipo: "antigo", i };
-      r.play();
+      pularSuave(r);
       atualizarBotoes();
     });
     ws.loadBlob(musica.blob);
@@ -1990,7 +2025,7 @@ const Jogo = (() => {
       // Com "loop com anterior" ligado, o play já começa no trecho anterior
       const inicio = (modoLoop === "anterior" && indice > 0) ? indice - 1 : indice;
       reproducao = { tipo: "trecho", i: inicio };
-      listaRegioes[inicio].play();
+      pularSuave(listaRegioes[inicio]);
       atualizarBotoes();
     }
   });
@@ -2000,7 +2035,7 @@ const Jogo = (() => {
       pararReproducao();
     } else {
       reproducao = { tipo: "seq", i: 0 };
-      listaRegioes[0].play(); // toca todos os já jogados em sequência
+      pularSuave(listaRegioes[0]); // toca todos os já jogados em sequência
       atualizarBotoes();
     }
   });
