@@ -1205,6 +1205,77 @@ const Editor = (() => {
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
   };
 
+  /* ---------- Ímã (snap): gruda bordas na linha vermelha e nos trechos ---------- */
+  const boundsAnt = {};      // id -> {start, end} (para saber que borda o professor moveu)
+  let aplicandoSnap = false; // evita recursão ao reposicionar a região
+
+  // px por segundo efetivos (considera o zoom) — define o "campo magnético"
+  function pxPorSeg() {
+    const dur = ws.getDuration() || 1;
+    const fit = (el("waveform").clientWidth || 600) / dur;
+    const zoom = Number(el("zoom-editor").value) || 1;
+    return Math.max(zoom, fit);
+  }
+  // Grude só quando a borda chega bem perto (~12px), no máx. 0,5s, no mín. 0,05s
+  const limiarSnap = () => Math.min(0.5, Math.max(0.05, 12 / pxPorSeg()));
+
+  // Alvos: linha vermelha (cursor), início/fim dos outros trechos e bordas da música
+  function alvosSnap(excluirId, incluirCursor) {
+    const alvos = [0, ws.getDuration()];
+    if (incluirCursor) alvos.push(ws.getCurrentTime());
+    for (const r of regioes.getRegions()) {
+      if (r.id === excluirId) continue;
+      alvos.push(r.start, r.end);
+    }
+    return alvos;
+  }
+  function grudar(t, excluirId, incluirCursor) {
+    const lim = limiarSnap();
+    let melhor = t, dist = lim;
+    for (const a of alvosSnap(excluirId, incluirCursor)) {
+      const d = Math.abs(a - t);
+      if (d < dist) { dist = d; melhor = a; }
+    }
+    return melhor;
+  }
+
+  function atualizarFaixa(r) {
+    const card = listaTrechos.querySelector(`[data-regiao="${r.id}"] .faixa`);
+    if (card) card.textContent = `${fmtTempo(r.start)} – ${fmtTempo(r.end)}`;
+  }
+
+  // Chamado durante o arrasto (region-update) e ao soltar (region-updated):
+  // gruda a borda que se moveu na linha vermelha ou na borda de outro trecho.
+  function aplicarSnap(r) {
+    if (!aplicandoSnap) {
+      const ant = boundsAnt[r.id] || { start: r.start, end: r.end };
+      const dIni = r.start - ant.start, dFim = r.end - ant.end;
+      const moveuBloco = Math.abs(dIni - dFim) < 1e-4 && Math.abs(dIni) > 1e-6;
+      let ni = r.start, nf = r.end;
+      if (moveuBloco) {
+        // arrastou o trecho inteiro: gruda a borda que tem alvo perto e leva a outra junto
+        const gi = grudar(r.start, r.id, true), gf = grudar(r.end, r.id, true);
+        const moveuI = gi !== r.start, moveuF = gf !== r.end;
+        if (moveuI && (!moveuF || Math.abs(gi - r.start) <= Math.abs(gf - r.end))) {
+          ni = gi; nf = r.end + (gi - r.start);
+        } else if (moveuF) {
+          nf = gf; ni = r.start + (gf - r.end);
+        }
+      } else {
+        // redimensionou uma borda: gruda só a que se moveu
+        if (Math.abs(dIni) > 1e-6) ni = grudar(r.start, r.id, true);
+        if (Math.abs(dFim) > 1e-6) nf = grudar(r.end, r.id, true);
+      }
+      if (nf - ni >= 0.1 && (Math.abs(ni - r.start) > 1e-4 || Math.abs(nf - r.end) > 1e-4)) {
+        aplicandoSnap = true;
+        r.setOptions({ start: ni, end: nf });
+        aplicandoSnap = false;
+      }
+    }
+    boundsAnt[r.id] = { start: r.start, end: r.end };
+    atualizarFaixa(r);
+  }
+
   /* ---------- WaveSurfer ---------- */
   function criarWaveSurfer(blob) {
     if (ws) { ws.destroy(); ws = null; regioes = null; }
@@ -1222,10 +1293,11 @@ const Editor = (() => {
     });
     regioes = ws.registerPlugin(WaveSurfer.Regions.create());
 
-    regioes.on("region-updated", (r) => {
-      const card = listaTrechos.querySelector(`[data-regiao="${r.id}"] .faixa`);
-      if (card) card.textContent = `${fmtTempo(r.start)} – ${fmtTempo(r.end)}`;
+    regioes.on("region-created", (r) => {
+      boundsAnt[r.id] = { start: r.start, end: r.end };
     });
+    regioes.on("region-update", aplicarSnap);   // ao vivo, durante o arrasto
+    regioes.on("region-updated", aplicarSnap);  // ao soltar (precisão final)
     regioes.on("region-out", (r) => {
       if (r !== regiaoTocando) return;
       // Ignora "saída" provocada por pulo do cursor (seek)
@@ -1253,8 +1325,12 @@ const Editor = (() => {
     if (!ws || !ws.getDuration()) { alert("Escolha primeiro o arquivo da música. 🎵"); return; }
     const dur = ws.getDuration();
     const cor = dados?.cor || CORES[numTrecho % CORES.length];
-    const inicio = dados ? dados.inicio : Math.min(ws.getCurrentTime(), Math.max(0, dur - 1));
-    const fim = dados ? dados.fim : Math.min(inicio + 4, dur);
+    let inicio = dados ? dados.inicio : Math.min(ws.getCurrentTime(), Math.max(0, dur - 1));
+    // Ao criar: gruda o início no fim de um trecho vizinho (sem contar o cursor,
+    // que é o próprio ponto de partida) — trechos nascem encostados.
+    if (!dados) inicio = grudar(inicio, null, false);
+    let fim = dados ? dados.fim : Math.min(inicio + 4, dur);
+    if (!dados) { const g = grudar(fim, null, false); if (g - inicio >= 0.3) fim = g; }
     numTrecho++;
     const regiao = regioes.addRegion({
       start: inicio, end: fim,
