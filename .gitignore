@@ -2,6 +2,9 @@
 Reaper/
 piano-visualizer/
 
+# Backups exportados do próprio app (contêm músicas/dados do André)
+ouvido-harmonico-backup-*.json
+
 # Documentos e temporários
 *.docx
 ~$*
