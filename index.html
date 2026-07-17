@@ -92,6 +92,7 @@
     transition: transform .08s ease;
   }
   .btn:active { transform: scale(.96); }
+  .btn:disabled { opacity: .45; transform: none; cursor: default; }
   .btn.secundario { background: var(--cartao); color: var(--tinta); }
   .btn.discreto {
     min-height: 44px; padding: 8px 14px; box-shadow: none;
@@ -1769,8 +1770,14 @@ const Jogo = (() => {
     jogo = j;
     indice = 0;
     pontos = 0;
+    respondido = false;
     Rotas.ir("jogo");
     el("jogo-titulo").textContent = "🎮 " + jogo.nome; // tom NUNCA aparece
+    // Limpa qualquer estado herdado enquanto a música carrega
+    el("btn-responder").hidden = false;
+    el("btn-responder").disabled = true;
+    el("btn-proximo").hidden = true;
+    el("feedback-jogo").hidden = true;
     try {
       musica = await DB.obter("musicas", jogo.musicaId);
     } catch (e) {
@@ -1925,11 +1932,16 @@ const Jogo = (() => {
 
     el("btn-responder").hidden = true;
     const ultimo = indice === jogo.trechos.length - 1;
-    el("btn-proximo").textContent = ultimo ? "Ver resultado 🏁" : "Próximo trecho ➡";
-    el("btn-proximo").hidden = false;
+    const bProximo = el("btn-proximo");
+    bProximo.textContent = ultimo ? "Ver resultado 🏁" : "Próximo trecho ➡";
+    bProximo.hidden = false;
+    // Trava breve: evita que um toque duplo no "Responder" caia no "Próximo"
+    bProximo.disabled = true;
+    setTimeout(() => { bProximo.disabled = false; }, 700);
   }
 
   function proximo() {
+    if (!respondido) return; // só avança depois de responder
     if (indice < jogo.trechos.length - 1) {
       indice++;
       prepararTrecho();

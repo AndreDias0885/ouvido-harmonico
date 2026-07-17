@@ -1,5 +1,5 @@
 /* Ouvido Harmônico — Service Worker (app shell offline) */
-const CACHE = "ouvido-harmonico-v25";
+const CACHE = "ouvido-harmonico-v26";
 const SHELL = [
   "./",
   "./index.html",
